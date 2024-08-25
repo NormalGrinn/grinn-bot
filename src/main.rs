@@ -70,6 +70,56 @@ fn count_minutes_of_anime(anime: &AnimeLength) -> u64 {
     episode_count * episode_length
 }
 
+
+async fn anime_in_year(msg_content: &Vec<String>) -> String {
+    let season_year = &msg_content[1];
+    let mut anime_in_year: Vec<AnimeLength> = Vec::new();
+    let mut page_number: i64 = 1;
+    let client = ReqestClient::new();
+    loop {
+        sleep(Duration::from_millis(667)).await;
+        let json = json!(
+            {
+                "query": graphql_queries::YEARQUERY,
+                "variables": {
+                    "seasonYear": season_year,
+                    "page": page_number,
+                }
+            }
+        );
+        let resp = client.post("https://graphql.anilist.co/")
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .body(json.to_string())
+                    .send()
+                    .await
+                    .unwrap()
+                    .text()
+                    .await;
+        // TODO: HANDLE RATE LIMITING
+        let result: Root = serde_json::from_str(&resp.unwrap()).unwrap();
+        let mut anime_lengths: Vec<AnimeLength> = result
+        .data
+        .Page
+        .media
+        .into_iter()
+        .map(AnimeLength::from)
+        .collect();
+        if anime_lengths.len() == 0 {
+            break;
+        }
+        anime_in_year.append(&mut anime_lengths);
+        page_number += 1;
+    }
+    // Get the minute count of each anime, get the total minutes of anime in a year, then convert that into hours and minutes
+    let anime_durations: Vec<u64> = anime_in_year.iter().map(count_minutes_of_anime).collect();
+    let year_duration = anime_durations.iter().fold(0, |acc, x| acc + x);
+    let year_hours = year_duration/60;
+    let year_minutes = year_duration%60;
+    let result_message = format!("The year {} has {} hours and {} minutes of anime!", season_year, year_hours, year_minutes);
+    result_message
+}
+
 #[async_trait]
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
@@ -81,51 +131,7 @@ impl EventHandler for Handler {
             }
         }
         if msg_content[0] == "!yearDuration" {
-            let season_year = &msg_content[1];
-            let mut anime_in_year: Vec<AnimeLength> = Vec::new();
-            let mut page_number: i64 = 1;
-            let client = ReqestClient::new();
-            loop {
-                sleep(Duration::from_millis(667)).await;
-                let json = json!(
-                    {
-                        "query": graphql_queries::YEARQUERY,
-                        "variables": {
-                            "seasonYear": season_year,
-                            "page": page_number,
-                        }
-                    }
-                );
-                let resp = client.post("https://graphql.anilist.co/")
-                            .header("Content-Type", "application/json")
-                            .header("Accept", "application/json")
-                            .body(json.to_string())
-                            .send()
-                            .await
-                            .unwrap()
-                            .text()
-                            .await;
-                // TODO: HANDLE RATE LIMITING
-                let result: Root = serde_json::from_str(&resp.unwrap()).unwrap();
-                let mut anime_lengths: Vec<AnimeLength> = result
-                .data
-                .Page
-                .media
-                .into_iter()
-                .map(AnimeLength::from)
-                .collect();
-                if anime_lengths.len() == 0 {
-                    break;
-                }
-                anime_in_year.append(&mut anime_lengths);
-                page_number += 1;
-        }
-        // Get the minute count of each anime, get the total minutes of anime in a year, then convert that into hours and minutes
-        let anime_durations: Vec<u64> = anime_in_year.iter().map(count_minutes_of_anime).collect();
-        let year_duration = anime_durations.iter().fold(0, |acc, x| acc + x);
-        let year_hours = year_duration/60;
-        let year_minutes = year_duration%60;
-        let result_message = format!("The year {} has {} hours and {} minutes of anime!", season_year, year_hours, year_minutes);
+        let result_message: String = anime_in_year(&msg_content).await;
         println!("{}", result_message);
             if let Err(why) = msg.channel_id.say(&ctx.http, result_message).await {
                 println!("Error sending message: {:?}", why);
