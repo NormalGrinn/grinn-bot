@@ -9,7 +9,8 @@ use serenity::{
 };
 use tokio::time::{sleep, Duration};
 
-pub mod graphql_queries;
+mod graphql_queries;
+mod anime_guessing_game;
 
 struct Handler;
 
@@ -135,6 +136,11 @@ impl EventHandler for Handler {
         println!("{}", result_message);
             if let Err(why) = msg.channel_id.say(&ctx.http, result_message).await {
                 println!("Error sending message: {:?}", why);
+            }
+        }
+        if msg_content[0] == "!animeGuessing" {
+            loop{
+
             }
         }
     }
