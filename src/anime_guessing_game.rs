@@ -136,7 +136,7 @@ pub async fn process_guess(guess: &str, anime_id: u64) -> bool {
 // 0: unscored
 // 0 < x < 20 very low 
 // 20 < x =< 50 low
-// 50 < x =< 65 middeling
+// 50 < x =< 65 middling 
 // 65 < x =< 75 high
 // 75 < x =< 90 very high
 // 90 < x =< 100 extremly high
