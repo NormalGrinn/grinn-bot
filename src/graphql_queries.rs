@@ -75,3 +75,57 @@ query ($userName: String)
   }
 }
 ";
+
+pub const STAFFQUERY: &str = "
+query ($animeId: Int)
+{
+  Media(id: $animeId, type: ANIME) {
+    staff {
+      edges {
+        node {
+          name {
+            full
+          }
+        }
+        role
+      }
+    }
+  }
+}
+";
+
+pub const MAINVAQUERY: &str = "
+query ($animeId: Int)
+{
+  Media(id: $animeId, type: ANIME) {
+    characters(role:MAIN) {
+      edges {
+        node {
+          id
+        }
+        voiceActors(language:JAPANESE) {
+          name {
+            full
+          }
+        }
+      }
+    }
+  }
+}
+";
+
+pub const STUDIOQUERY: &str = "
+query ($animeId: Int)
+{
+  Media(id: $animeId, type: ANIME) {
+    studios {
+      edges {
+        node {
+          name
+        }
+        isMain
+      }
+    }
+  }
+}
+";

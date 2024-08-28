@@ -1,18 +1,16 @@
 use std::{env, fmt::format};
 use reqwest::Client;
-use serde_json::json;
+use serde_json::{from_str, json};
 use serde::Deserialize;
-use serenity::{
-    async_trait,
-    model::{channel::Message, gateway::Ready},
-    prelude::*,
-};
+use rand::rngs::OsRng;
 use tokio::time::{sleep, Duration};
 use rand::Rng;
 use strsim::damerau_levenshtein;
 
+use crate::anime_guessing_helpers::staff::get_staff;
+use crate::anime_guessing_helpers::voice_actors;
 use crate::{graphql_queries, types::AnimeGuess};
-use crate::types;
+use crate::{anime_guessing_helpers, types};
 use crate::helpers;
 
 #[derive(Deserialize, Debug)]
@@ -63,6 +61,7 @@ struct Media {
 }
 
 fn generate_hint(entry_info: &Entry) -> types::AnimeGuess {
+    let anime_id = entry_info.media.id;
     let mut hints: Vec<types::Hint> = Vec::new();
     if let Some(season_year) = entry_info.media.seasonYear {
         hints.push(types::Hint::SeasonYear(season_year));
@@ -86,6 +85,8 @@ fn generate_hint(entry_info: &Entry) -> types::AnimeGuess {
     if let Some(ref source) = entry_info.media.source {
         hints.push(types::Hint::Source(source.clone()));
     }
+    // let studios = get_studio(anime_id).await;
+    // if !studios.isempty
     let mut titles: Vec<String> = Vec::new();
     match entry_info.media.title.romaji {
         Some(ref r) => titles.push(r.clone()),
@@ -104,37 +105,11 @@ fn generate_hint(entry_info: &Entry) -> types::AnimeGuess {
         titles.push(e.to_string());
     }
     let anime_guess = types::AnimeGuess {
-        id: entry_info.media.id,
+        id: anime_id,
         synonyms: titles,
         hints: hints,
     };
     anime_guess
-}
-
-pub async fn anime_guessing_setup(userName: &str) -> AnimeGuess {
-    let client = Client::new();
-    let json = json!(
-        {
-            "query": graphql_queries::USERLISTGUESSINGQUERY,
-            "variables": {
-                "userName": userName,
-            }
-        }
-    );
-    let resp = client.post("https://graphql.anilist.co/")
-                .header("Content-Type", "application/json")
-                .header("Accept", "application/json")
-                .body(json.to_string())
-                .send()
-                .await
-                .unwrap()
-                .text()
-                .await;
-    let result: Response = serde_json::from_str(&resp.unwrap()).unwrap();
-    let mut rng = rand::thread_rng();
-    let chosen_entry: usize = rng.gen_range(0..result.data.MediaListCollection.lists[0].entries.len());
-    let anime_hints = generate_hint(&result.data.MediaListCollection.lists[0].entries[chosen_entry]);
-    anime_hints
 }
 
 // Process the guess via a damerau_levenshtein similairty.
@@ -205,7 +180,71 @@ pub fn process_hint(remaining_hints: &mut Vec<types::Hint>) -> String {
                 }
                 if !vt.is_empty() { remaining_hints.push(types::Hint::Tag(vt)); }
             }
+            types::Hint::Studios(mut vs) => {
+                let potentail_studio = helpers::get_random_element_from_vec(&mut vs);
+                match potentail_studio {
+                    None => hint = format!("weh"),
+                    Some(studio) => hint = format!("This anime was made by {}", studio),
+                }
+            }
+            types::Hint::VoiceActors(mut vas) => {
+                let potentail_va = helpers::get_random_element_from_vec(&mut vas);
+                match potentail_va {
+                    None => hint = format!("weh"),
+                    Some(va) => hint = format!("{} voiced a main character in this show", va),
+                }
+            }
+            types::Hint::Staff(mut vs) => {
+                let potentail_staff = helpers::get_random_element_from_vec(&mut vs);
+                match potentail_staff {
+                    None => hint = format!("weh"),
+                    Some(staff) => hint = format!("{} worked on this anime with the role of: {}", staff.name, staff.role),
+                }
+            }
         }
     }
     hint
+}
+
+// Add new hints that require seperate queries
+async fn add_anime_info(anime_id: u64, hints: &mut Vec<types::Hint>) {
+    let studios = anime_guessing_helpers::studios::get_studios(anime_id).await;
+    if !studios.is_empty() {
+        hints.push(types::Hint::Studios(studios));
+    }
+    let voice_actors = anime_guessing_helpers::voice_actors::get_voice_actors(anime_id).await;
+    if !voice_actors.is_empty() {
+        hints.push(types::Hint::VoiceActors(voice_actors));
+    }
+    let staff = anime_guessing_helpers::staff::get_staff(anime_id).await;
+    if !staff.is_empty() {
+        hints.push(types::Hint::Staff(staff));
+    }
+}
+
+pub async fn anime_guessing_setup(userName: &str) -> AnimeGuess {
+    let client = Client::new();
+    let json = json!(
+        {
+            "query": graphql_queries::USERLISTGUESSINGQUERY,
+            "variables": {
+                "userName": userName,
+            }
+        }
+    );
+    let resp = client.post("https://graphql.anilist.co/")
+                .header("Content-Type", "application/json")
+                .header("Accept", "application/json")
+                .body(json.to_string())
+                .send()
+                .await
+                .unwrap()
+                .text()
+                .await;
+    let result: Response = serde_json::from_str(&resp.unwrap()).unwrap();
+    let mut rng = OsRng;
+    let chosen_entry: usize = rng.gen_range(0..result.data.MediaListCollection.lists[0].entries.len());
+    let mut anime_hints = generate_hint(&result.data.MediaListCollection.lists[0].entries[chosen_entry]);
+    add_anime_info(anime_hints.id, &mut anime_hints.hints).await;
+    anime_hints
 }

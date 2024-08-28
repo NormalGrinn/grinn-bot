@@ -11,6 +11,7 @@ mod helpers;
 mod anime_year_duration;
 mod group_scores;
 mod sql_queries;
+mod anime_guessing_helpers; 
 
 struct Handler;
 
@@ -44,7 +45,7 @@ impl EventHandler for Handler {
             }
             println!("{:?}", anime_info.id);
             loop {
-                match timeout(Duration::from_secs(600), read_next_message(&ctx, msg.channel_id)).await {
+                match timeout(Duration::from_secs(300), read_next_message(&ctx, msg.channel_id)).await {
                     Ok(Some(new_msg)) => {
                         let (msg_head, msg_tail) = helpers::split_first_word(&new_msg.content);
                         if msg_head == "!hint" {
