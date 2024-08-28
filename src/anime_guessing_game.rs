@@ -1,5 +1,5 @@
 use std::{env, fmt::format};
-use reqwest::Client as ReqestClient;
+use reqwest::Client;
 use serde_json::json;
 use serde::Deserialize;
 use serenity::{
@@ -9,6 +9,7 @@ use serenity::{
 };
 use tokio::time::{sleep, Duration};
 use rand::Rng;
+use strsim::damerau_levenshtein;
 
 use crate::{graphql_queries, types::AnimeGuess};
 use crate::types;
@@ -41,6 +42,13 @@ struct Entry {
 }
 
 #[derive(Deserialize, Debug)]
+struct Title {
+    romaji: Option<String>,
+    english: Option<String>,
+    native: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
 struct Media {
     id: u64,
     season: Option<String>,
@@ -50,6 +58,8 @@ struct Media {
     tags: Vec<types::Tag>,
     averageScore: Option<u64>,
     source: Option<String>,
+    title: Title,
+    synonyms: Vec<String>,
 }
 
 fn generate_hint(entry_info: &Entry) -> types::AnimeGuess {
@@ -76,15 +86,33 @@ fn generate_hint(entry_info: &Entry) -> types::AnimeGuess {
     if let Some(ref source) = entry_info.media.source {
         hints.push(types::Hint::Source(source.clone()));
     }
+    let mut titles: Vec<String> = Vec::new();
+    match entry_info.media.title.romaji {
+        Some(ref r) => titles.push(r.clone()),
+        None => (),
+    }
+    match entry_info.media.title.english {
+        Some(ref r) => titles.push(r.clone()),
+        None => (),
+    }
+    
+    match entry_info.media.title.native {
+        Some(ref r) => titles.push(r.clone()),
+        None => (),
+    }
+    for e in entry_info.media.synonyms.iter() {
+        titles.push(e.to_string());
+    }
     let anime_guess = types::AnimeGuess {
         id: entry_info.media.id,
+        synonyms: titles,
         hints: hints,
     };
     anime_guess
 }
 
 pub async fn anime_guessing_setup(userName: &str) -> AnimeGuess {
-    let client = ReqestClient::new();
+    let client = Client::new();
     let json = json!(
         {
             "query": graphql_queries::USERLISTGUESSINGQUERY,
@@ -109,33 +137,15 @@ pub async fn anime_guessing_setup(userName: &str) -> AnimeGuess {
     anime_hints
 }
 
-pub async fn process_guess(guess: &str, anime_id: u64) -> bool {
-    let client = ReqestClient::new();
-    let json = json!(
-        {
-            "query": graphql_queries::ANIMESEARCHQUERY,
-            "variables": {
-                "animeName": guess,
-            }
+// Process the guess via a damerau_levenshtein similairty.
+// It goes trough all of the titles and synonyms of an anime
+pub async fn process_guess(guess: &str, titles: &Vec<String>) -> bool {
+    for e in titles.iter() {
+        if damerau_levenshtein(e, guess) <= 3 {
+            return true;
         }
-    );
-    let resp = client.post("https://graphql.anilist.co/")
-    .header("Content-Type", "application/json")
-    .header("Accept", "application/json")
-    .body(json.to_string())
-    .send()
-    .await
-    .unwrap()
-    .text()
-    .await;
-    let result: serde_json::Value = serde_json::from_str(&resp.unwrap()).unwrap();
-    let potential_guess_id: Option<u64>= result["data"]["Media"]["id"].as_u64();
-    let mut guess_id = 0;
-    match potential_guess_id {
-        Some(x) => guess_id = x,
-        None => ()
     }
-    return guess_id == anime_id
+    false
 }
 
 // The ranks are:
@@ -166,8 +176,8 @@ fn rank_weight(number: u64) -> String {
     }
 }
 
-pub fn process_hint(remaining_hints: &mut types::AnimeGuess) -> String {
-    let potential_hint = helpers::get_random_element_from_vec(&mut remaining_hints.hints);
+pub fn process_hint(remaining_hints: &mut Vec<types::Hint>) -> String {
+    let potential_hint = helpers::get_random_element_from_vec(remaining_hints);
     let hint: String;
     match potential_hint {
         None => hint = format!("No hints are left!"),
@@ -185,7 +195,7 @@ pub fn process_hint(remaining_hints: &mut types::AnimeGuess) -> String {
                     None => hint = format!("weh"),
                     Some(genre) => hint = format!("{} is one of this anime's genres", genre),
                 }
-                if !vs.is_empty() { remaining_hints.hints.push(types::Hint::Genres(vs)); }
+                if !vs.is_empty() { remaining_hints.push(types::Hint::Genres(vs)); }
             },
             types::Hint::Tag(mut vt) => {
                 let potential_tag = helpers::get_random_element_from_vec(&mut vt);
@@ -193,7 +203,7 @@ pub fn process_hint(remaining_hints: &mut types::AnimeGuess) -> String {
                     None => hint = format!("weh"),
                     Some(tag) => hint = format!("{} is one of this anime's tags and it has a {} rating", tag.name, rank_weight(tag.rank)),
                 }
-                if !vt.is_empty() { remaining_hints.hints.push(types::Hint::Tag(vt)); }
+                if !vt.is_empty() { remaining_hints.push(types::Hint::Tag(vt)); }
             }
         }
     }

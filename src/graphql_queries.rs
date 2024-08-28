@@ -33,6 +33,12 @@ query ($userName: String)
         }
         averageScore
         source
+        title {
+          romaji
+          english
+          native
+        }
+        synonyms
         }
       }
     }
@@ -47,3 +53,25 @@ query ($animeName: String)
     id
   }
 }";
+
+pub const USERANIMELISTQUERY: &str = "
+query ($userName: String)
+{
+  MediaListCollection (userName: $userName, type:ANIME, status:COMPLETED) {
+    lists {
+      entries {
+        score(format: POINT_100)
+        media {
+        id
+        idMal
+        }
+      }
+    }
+    user {
+      mediaListOptions {
+        scoreFormat
+      }
+    }
+  }
+}
+";

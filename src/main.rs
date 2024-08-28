@@ -1,8 +1,4 @@
-use std::{env, fmt::format};
-use anime_guessing_game::process_hint;
-use reqwest::Client as ReqestClient;
-use serde_json::json;
-use serde::Deserialize;
+use std::{env, hint};
 use serenity::{
     all::ChannelId, async_trait, model::{channel::Message, gateway::Ready}, prelude::*
 };
@@ -13,6 +9,8 @@ mod anime_guessing_game;
 mod types;
 mod helpers;
 mod anime_year_duration;
+mod group_scores;
+mod sql_queries;
 
 struct Handler;
 
@@ -28,13 +26,17 @@ impl EventHandler for Handler {
                 println!("Error sending message: {:?}", why);
             }
         }
+        if msg_content[0] == "!addUser" {
+            group_scores::add_user(&msg_content[1]);
+        }
         if msg_content[0] == "!animeGuess" {
             let mut anime_info = anime_guessing_game::anime_guessing_setup(&msg_content[1]).await;
             let mut starting_hint_wrapper = types::AnimeGuess {
                 id: anime_info.id,
+                synonyms: anime_info.synonyms.clone(),
                 hints: vec!(anime_info.hints.remove(0)),
             };
-            let starting_hint = anime_guessing_game::process_hint(&mut starting_hint_wrapper);
+            let starting_hint = anime_guessing_game::process_hint(&mut starting_hint_wrapper.hints);
             let mut hints: Vec<String> = vec!(starting_hint);
             let start_message = format!("The anime guessing game has started for {}'s list!\n{}", &msg_content[1], hints[0]);
             if let Err(why) = msg.channel_id.say(&ctx.http, start_message).await {
@@ -46,14 +48,21 @@ impl EventHandler for Handler {
                     Ok(Some(new_msg)) => {
                         let (msg_head, msg_tail) = helpers::split_first_word(&new_msg.content);
                         if msg_head == "!hint" {
-                            let hint_message = anime_guessing_game::process_hint(&mut anime_info);
-                            hints.push(hint_message);
+                            let mut no_of_hints = 1;
+                            match msg_tail.parse::<u64>() {
+                                Ok(n) => if n > 0 && n <= 10 {no_of_hints = n},
+                                Err(e) => (),
+                            }
+                            for i in 0..no_of_hints {
+                                let hint_message = anime_guessing_game::process_hint(&mut anime_info.hints);
+                                hints.push(hint_message);
+                            }
                             if let Err(why) = msg.channel_id.say(&ctx.http, helpers::display_str_vec(&hints)).await {
                                 println!("Error sending message: {:?}", why);
                             }
                         }
                         if msg_head == "!guess" {
-                            let result = anime_guessing_game::process_guess(&msg_tail, anime_info.id).await;
+                            let result = anime_guessing_game::process_guess(&msg_tail, &anime_info.synonyms).await;
                             if result {
                                 let correct_message = format!("You guessed right! The anime was https://anilist.co/anime/{}", anime_info.id);
                                 if let Err(why) = msg.channel_id.say(&ctx.http, correct_message).await {

@@ -21,5 +21,6 @@ pub enum Hint {
 #[derive(Debug)]
 pub struct AnimeGuess {
     pub(crate) id: u64,
+    pub(crate) synonyms: Vec<String>,
     pub(crate) hints: Vec<Hint>, 
 }

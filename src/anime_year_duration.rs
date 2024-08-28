@@ -29,7 +29,7 @@ struct Data {
 }
 
 #[derive(Deserialize, Debug)]
-struct Root {
+struct Response {
     data: Data,
 }
 
@@ -89,7 +89,7 @@ pub async fn anime_in_year(msg_content: &Vec<String>) -> String {
                     .text()
                     .await;
         // TODO: HANDLE RATE LIMITING
-        let result: Root = serde_json::from_str(&resp.unwrap()).unwrap();
+        let result: Response = serde_json::from_str(&resp.unwrap()).unwrap();
         let mut anime_lengths: Vec<AnimeLength> = result
         .data
         .Page
