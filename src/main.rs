@@ -1,4 +1,5 @@
 use std::{env, fmt::format};
+use anime_guessing_game::process_hint;
 use reqwest::Client as ReqestClient;
 use serde_json::json;
 use serde::Deserialize;
@@ -29,18 +30,25 @@ impl EventHandler for Handler {
         }
         if msg_content[0] == "!animeGuess" {
             let mut anime_info = anime_guessing_game::anime_guessing_setup(&msg_content[1]).await;
-            let start_message = format!("The anime guessing game has started for {}'s list!", &msg_content[1]);
+            let mut starting_hint_wrapper = types::AnimeGuess {
+                id: anime_info.id,
+                hints: vec!(anime_info.hints.remove(0)),
+            };
+            let starting_hint = anime_guessing_game::process_hint(&mut starting_hint_wrapper);
+            let mut hints: Vec<String> = vec!(starting_hint);
+            let start_message = format!("The anime guessing game has started for {}'s list!\n{}", &msg_content[1], hints[0]);
             if let Err(why) = msg.channel_id.say(&ctx.http, start_message).await {
                 println!("Error sending message: {:?}", why);
             }
             println!("{:?}", anime_info.id);
             loop {
-                match timeout(Duration::from_secs(60), read_next_message(&ctx, msg.channel_id)).await {
+                match timeout(Duration::from_secs(300), read_next_message(&ctx, msg.channel_id)).await {
                     Ok(Some(new_msg)) => {
                         let (msg_head, msg_tail) = helpers::split_first_word(&new_msg.content);
                         if msg_head == "!hint" {
                             let hint_message = anime_guessing_game::process_hint(&mut anime_info);
-                            if let Err(why) = msg.channel_id.say(&ctx.http, hint_message).await {
+                            hints.push(hint_message);
+                            if let Err(why) = msg.channel_id.say(&ctx.http, helpers::display_str_vec(&hints)).await {
                                 println!("Error sending message: {:?}", why);
                             }
                         }
@@ -75,6 +83,9 @@ impl EventHandler for Handler {
                     },
                     Ok(None) => {
                         println!("No message received within the timeout period");
+                        if let Err(why) = msg.channel_id.say(&ctx.http, "The bot timed out").await {
+                            println!("Error sending message: {:?}", why);
+                        }
                         break;
                     },
                     Err(_) => {

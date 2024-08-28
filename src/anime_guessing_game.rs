@@ -12,6 +12,7 @@ use rand::Rng;
 
 use crate::{graphql_queries, types::AnimeGuess};
 use crate::types;
+use crate::helpers;
 
 #[derive(Deserialize, Debug)]
 struct Response {
@@ -53,6 +54,9 @@ struct Media {
 
 fn generate_hint(entry_info: &Entry) -> types::AnimeGuess {
     let mut hints: Vec<types::Hint> = Vec::new();
+    if let Some(season_year) = entry_info.media.seasonYear {
+        hints.push(types::Hint::SeasonYear(season_year));
+    }
     hints.push(types::Hint::UserScore(entry_info.score));
     if !entry_info.media.genres.is_empty() {
         hints.push(types::Hint::Genres(entry_info.media.genres.clone()));
@@ -62,9 +66,6 @@ fn generate_hint(entry_info: &Entry) -> types::AnimeGuess {
     }
     if let Some(ref season) = entry_info.media.season {
         hints.push(types::Hint::Season(season.clone()));
-    }
-    if let Some(season_year) = entry_info.media.seasonYear {
-        hints.push(types::Hint::SeasonYear(season_year));
     }
     if let Some(ref format) = entry_info.media.format {
         hints.push(types::Hint::Format(format.clone()));
@@ -165,18 +166,8 @@ fn rank_weight(number: u64) -> String {
     }
 }
 
-fn get_random_element_from_vec<T>(v: &mut Vec<T>) -> Option<T> {
-    if v.is_empty() {
-        None
-    } else {
-        let mut rng = rand::thread_rng();
-        let chosen_index = rng.gen_range(0..v.len());
-        Some(v.remove(chosen_index))
-    }
-}
-
 pub fn process_hint(remaining_hints: &mut types::AnimeGuess) -> String {
-    let potential_hint = get_random_element_from_vec(&mut remaining_hints.hints);
+    let potential_hint = helpers::get_random_element_from_vec(&mut remaining_hints.hints);
     let hint: String;
     match potential_hint {
         None => hint = format!("No hints are left!"),
@@ -189,7 +180,7 @@ pub fn process_hint(remaining_hints: &mut types::AnimeGuess) -> String {
             types::Hint::Season(s) => hint = format!("This anime aired in the {} season", s),
             types::Hint::Source(s) => hint = format!("The source of this anime is: {}", s),
             types::Hint::Genres(mut vs) => {
-                let potential_genre = get_random_element_from_vec(&mut vs);
+                let potential_genre = helpers::get_random_element_from_vec(&mut vs);
                 match potential_genre {
                     None => hint = format!("weh"),
                     Some(genre) => hint = format!("{} is one of this anime's genres", genre),
@@ -197,7 +188,7 @@ pub fn process_hint(remaining_hints: &mut types::AnimeGuess) -> String {
                 if !vs.is_empty() { remaining_hints.hints.push(types::Hint::Genres(vs)); }
             },
             types::Hint::Tag(mut vt) => {
-                let potential_tag = get_random_element_from_vec(&mut vt);
+                let potential_tag = helpers::get_random_element_from_vec(&mut vt);
                 match potential_tag {
                     None => hint = format!("weh"),
                     Some(tag) => hint = format!("{} is one of this anime's tags and it has a {} rating", tag.name, rank_weight(tag.rank)),
