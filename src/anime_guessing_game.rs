@@ -128,7 +128,12 @@ pub async fn process_guess(guess: &str, anime_id: u64) -> bool {
     .text()
     .await;
     let result: serde_json::Value = serde_json::from_str(&resp.unwrap()).unwrap();
-    let guess_id: u64 = result["data"]["Media"]["id"].as_u64().unwrap();
+    let potential_guess_id: Option<u64>= result["data"]["Media"]["id"].as_u64();
+    let mut guess_id = 0;
+    match potential_guess_id {
+        Some(x) => guess_id = x,
+        None => ()
+    }
     return guess_id == anime_id
 }
 
@@ -180,9 +185,9 @@ pub fn process_hint(remaining_hints: &mut types::AnimeGuess) -> String {
             types::Hint::SeasonYear(x) => hint = format!("This anime started airing in the year {}", x),
             types::Hint::UserScore(x) => { hint = format!("You gave this anime a {} score", rank_weight(x))},
             types::Hint::AverageScore(x) => hint = format!("On AL this anime has a {} average score", rank_weight(x)),
-            types::Hint::Format(s) => hint = format!("The format of this anime is a(n) {}", s),
+            types::Hint::Format(s) => hint = format!("The format of this anime is: {}", s),
             types::Hint::Season(s) => hint = format!("This anime aired in the {} season", s),
-            types::Hint::Source(s) => hint = format!("The source of this anime is a(n) {}", s),
+            types::Hint::Source(s) => hint = format!("The source of this anime is: {}", s),
             types::Hint::Genres(mut vs) => {
                 let potential_genre = get_random_element_from_vec(&mut vs);
                 match potential_genre {
