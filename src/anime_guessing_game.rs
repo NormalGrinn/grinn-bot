@@ -141,7 +141,7 @@ pub async fn anime_guessing_setup(userName: &str) -> AnimeGuess {
 // It goes trough all of the titles and synonyms of an anime
 pub async fn process_guess(guess: &str, titles: &Vec<String>) -> bool {
     for e in titles.iter() {
-        if damerau_levenshtein(e, guess) <= 3 {
+        if damerau_levenshtein(&e.to_lowercase(), &guess.to_lowercase()) <= 3 {
             return true;
         }
     }
