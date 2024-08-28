@@ -158,17 +158,17 @@ pub fn process_hint(remaining_hints: &mut Vec<types::Hint>) -> String {
         None => hint = format!("No hints are left!"),
         Some(chosen_hint) =>     
         match chosen_hint {
-            types::Hint::SeasonYear(x) => hint = format!("This anime started airing in the year {}", x),
-            types::Hint::UserScore(x) => { hint = format!("You gave this anime a {} score", rank_weight(x))},
-            types::Hint::AverageScore(x) => hint = format!("On AL this anime has a {} average score", rank_weight(x)),
-            types::Hint::Format(s) => hint = format!("The format of this anime is: {}", s),
+            types::Hint::SeasonYear(x) => hint = format!("This anime started airing in the year **{}**", x),
+            types::Hint::UserScore(x) => { hint = format!("You gave this anime a **{}** score", rank_weight(x))},
+            types::Hint::AverageScore(x) => hint = format!("On AL this anime has a **{}** average score", rank_weight(x)),
+            types::Hint::Format(s) => hint = format!("The format of this anime is: **{}**", s),
             types::Hint::Season(s) => hint = format!("This anime aired in the {} season", s),
             types::Hint::Source(s) => hint = format!("The source of this anime is: {}", s),
             types::Hint::Genres(mut vs) => {
                 let potential_genre = helpers::get_random_element_from_vec(&mut vs);
                 match potential_genre {
                     None => hint = format!("weh"),
-                    Some(genre) => hint = format!("{} is one of this anime's genres", genre),
+                    Some(genre) => hint = format!("**{}** is one of this anime's genres", genre),
                 }
                 if !vs.is_empty() { remaining_hints.push(types::Hint::Genres(vs)); }
             },
@@ -176,7 +176,7 @@ pub fn process_hint(remaining_hints: &mut Vec<types::Hint>) -> String {
                 let potential_tag = helpers::get_random_element_from_vec(&mut vt);
                 match potential_tag {
                     None => hint = format!("weh"),
-                    Some(tag) => hint = format!("{} is one of this anime's tags and it has a {} rating", tag.name, rank_weight(tag.rank)),
+                    Some(tag) => hint = format!("**{}** is one of this anime's tags and it has a **{}** rating", tag.name, rank_weight(tag.rank)),
                 }
                 if !vt.is_empty() { remaining_hints.push(types::Hint::Tag(vt)); }
             }
@@ -184,21 +184,21 @@ pub fn process_hint(remaining_hints: &mut Vec<types::Hint>) -> String {
                 let potentail_studio = helpers::get_random_element_from_vec(&mut vs);
                 match potentail_studio {
                     None => hint = format!("weh"),
-                    Some(studio) => hint = format!("This anime was made by {}", studio),
+                    Some(studio) => hint = format!("This anime was made by **{}**", studio),
                 }
             }
             types::Hint::VoiceActors(mut vas) => {
                 let potentail_va = helpers::get_random_element_from_vec(&mut vas);
                 match potentail_va {
                     None => hint = format!("weh"),
-                    Some(va) => hint = format!("{} voiced a main character in this show", va),
+                    Some(va) => hint = format!("**{}** voiced a main character in this show", va),
                 }
             }
             types::Hint::Staff(mut vs) => {
                 let potentail_staff = helpers::get_random_element_from_vec(&mut vs);
                 match potentail_staff {
                     None => hint = format!("weh"),
-                    Some(staff) => hint = format!("{} worked on this anime with the role of: {}", staff.name, staff.role),
+                    Some(staff) => hint = format!("**{}** worked on this anime with the role of: **{}**", staff.name, staff.role),
                 }
             }
         }
@@ -209,14 +209,17 @@ pub fn process_hint(remaining_hints: &mut Vec<types::Hint>) -> String {
 // Add new hints that require seperate queries
 async fn add_anime_info(anime_id: u64, hints: &mut Vec<types::Hint>) {
     let studios = anime_guessing_helpers::studios::get_studios(anime_id).await;
+    sleep(Duration::from_millis(150)).await;
     if !studios.is_empty() {
         hints.push(types::Hint::Studios(studios));
     }
     let voice_actors = anime_guessing_helpers::voice_actors::get_voice_actors(anime_id).await;
+    sleep(Duration::from_millis(150)).await;
     if !voice_actors.is_empty() {
         hints.push(types::Hint::VoiceActors(voice_actors));
     }
     let staff = anime_guessing_helpers::staff::get_staff(anime_id).await;
+    sleep(Duration::from_millis(150)).await;
     if !staff.is_empty() {
         hints.push(types::Hint::Staff(staff));
     }

@@ -65,7 +65,7 @@ pub async fn get_staff(anime_id: u64) -> Vec<types::Staff> {
     let num_of_staff = 5;
     if !result.data.Media.staff.edges.is_empty() {
         for s in result.data.Media.staff.edges.iter() {
-            if(staff.len() < num_of_staff) {
+            if staff.len() < num_of_staff {
                 let added_staff = types::Staff {
                     name: s.node.name.full.clone(),
                     role: s.role.clone(),

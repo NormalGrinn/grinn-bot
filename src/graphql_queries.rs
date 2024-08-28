@@ -77,9 +77,9 @@ query ($userName: String)
 ";
 
 pub const STAFFQUERY: &str = "
-query ($animeId: Int)
+query ($animeID: Int)
 {
-  Media(id: $animeId, type: ANIME) {
+  Media(id: $animeID) {
     staff {
       edges {
         node {
@@ -95,9 +95,9 @@ query ($animeId: Int)
 ";
 
 pub const MAINVAQUERY: &str = "
-query ($animeId: Int)
+query ($animeID: Int)
 {
-  Media(id: $animeId, type: ANIME) {
+  Media(id: $animeID) {
     characters(role:MAIN) {
       edges {
         node {
@@ -115,9 +115,9 @@ query ($animeId: Int)
 ";
 
 pub const STUDIOQUERY: &str = "
-query ($animeId: Int)
+query ($animeID: Int)
 {
-  Media(id: $animeId, type: ANIME) {
+  Media(id: $animeID) {
     studios {
       edges {
         node {
