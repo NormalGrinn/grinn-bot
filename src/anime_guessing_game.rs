@@ -162,8 +162,8 @@ pub fn process_hint(remaining_hints: &mut Vec<types::Hint>) -> String {
             types::Hint::UserScore(x) => { hint = format!("You gave this anime a **{}** score", rank_weight(x))},
             types::Hint::AverageScore(x) => hint = format!("On AL this anime has a **{}** average score", rank_weight(x)),
             types::Hint::Format(s) => hint = format!("The format of this anime is: **{}**", s),
-            types::Hint::Season(s) => hint = format!("This anime aired in the {} season", s),
-            types::Hint::Source(s) => hint = format!("The source of this anime is: {}", s),
+            types::Hint::Season(s) => hint = format!("This anime aired in the {} **season**", s),
+            types::Hint::Source(s) => hint = format!("The source of this anime is: **{}**", s),
             types::Hint::Genres(mut vs) => {
                 let potential_genre = helpers::get_random_element_from_vec(&mut vs);
                 match potential_genre {
