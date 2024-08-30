@@ -51,6 +51,7 @@ pub async fn animeguess(
         },
         Err(_) => (),
     };
+    ctx.defer().await?;
     let (mut entry_info, names) = anime_guessing_game::anime_guessing_setup(&username).await;
     let mut starting_hint_wrapper = types::AnimeGuess {
         id: entry_info.id,
@@ -60,13 +61,12 @@ pub async fn animeguess(
     let starting_hint = anime_guessing_game::process_hint(&mut starting_hint_wrapper.hints);
     let gotten_hints: Vec<String> = vec!(starting_hint);
     let starting_message = format!("The anime guessing game has started for {}\n{}", username, gotten_hints[0]);
-    let resp = database::set_anime_info(ctx.channel_id().get(), entry_info, gotten_hints, names).await;
-    match resp {
+    match database::set_anime_info(ctx.channel_id().get(), entry_info, gotten_hints, names).await {
         Ok(_) => {
             ctx.say(starting_message).await?;
             return Ok(())
         },
-        Err(_) => (),
+        Err(e) => eprintln!("Error setting anime info: {:?}", e)
     }
     ctx.say("An error has occured").await?;
     Ok(())

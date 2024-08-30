@@ -212,17 +212,17 @@ pub fn process_hint(remaining_hints: &mut Vec<types::Hint>) -> String {
 // Add new hints that require seperate queries
 async fn add_anime_info(anime_id: u64, hints: &mut Vec<types::Hint>) {
     let studios = anime_guessing_helpers::studios::get_studios(anime_id).await;
-    sleep(Duration::from_millis(150)).await;
+    sleep(Duration::from_millis(50)).await;
     if !studios.is_empty() {
         hints.push(types::Hint::Studios(studios));
     }
     let voice_actors = anime_guessing_helpers::voice_actors::get_voice_actors(anime_id).await;
-    sleep(Duration::from_millis(150)).await;
+    sleep(Duration::from_millis(50)).await;
     if !voice_actors.is_empty() {
         hints.push(types::Hint::VoiceActors(voice_actors));
     }
     let staff = anime_guessing_helpers::staff::get_staff(anime_id).await;
-    sleep(Duration::from_millis(150)).await;
+    sleep(Duration::from_millis(50)).await;
     if !staff.is_empty() {
         hints.push(types::Hint::Staff(staff));
     }
