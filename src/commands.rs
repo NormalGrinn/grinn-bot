@@ -152,7 +152,8 @@ pub async fn guess(
                         let _ = database::give_up(channel_id).await;
                         return Ok(());
                     } else {
-                        ctx.say("You guessed wrong!").await?;
+                        let wrong_message = format!("Your guess of {} is wrong!", anime_guess);
+                        ctx.say(wrong_message).await?;
                         return Ok(());
                     }
                 },
