@@ -117,7 +117,7 @@ fn generate_hint(entry_info: &Entry) -> types::AnimeGuess {
 // It goes trough all of the titles and synonyms of an anime
 pub async fn process_guess(guess: &str, titles: &Vec<String>) -> bool {
     for e in titles.iter() {
-        if damerau_levenshtein(&e.to_lowercase(), &guess.to_lowercase()) <= 3 {
+        if damerau_levenshtein(&e.to_lowercase(), &guess.to_lowercase()) <= 1 {
             return true;
         }
     }
