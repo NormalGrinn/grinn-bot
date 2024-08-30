@@ -94,9 +94,12 @@ pub async fn get_filtered_names(partial: &str, channel_id: u64) -> Vec<String> {
             let potentail_names: Result<types::StringVecWrapper> = conn.query_row(GET_NAMES, rusqlite::params![channel_id], |row| row.get(0));
             match potentail_names {
                 Ok(names) => {
-                    let filtered_names: Vec<String> = names.stringvec.into_iter()
-                    .filter(|e| jaro_winkler(partial, &e) > 0.6)
+                    let mut similarity_tuples: Vec<(String, f64)> = names.stringvec
+                    .iter()
+                    .map(|s| (s.clone(), jaro_winkler(partial, s)))
                     .collect();
+                    similarity_tuples.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+                    let filtered_names: Vec<String> = similarity_tuples.into_iter().map(|(s, _)| s).collect();
                     return filtered_names
                     },
                 Err(_) => {
