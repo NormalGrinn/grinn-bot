@@ -36,9 +36,7 @@ query ($userName: String)
         title {
           romaji
           english
-          native
         }
-        synonyms
         }
       }
     }
