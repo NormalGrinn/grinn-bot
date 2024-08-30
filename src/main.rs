@@ -1,8 +1,11 @@
-use std::{env, hint};
+use std::{collections::HashMap, env, sync::{Arc, Mutex}, time::Duration};
+use database::start_db;
 use serenity::{
     all::ChannelId, async_trait, model::{channel::Message, gateway::Ready}, prelude::*
 };
-use tokio::time::{sleep, Duration, timeout};
+use tokio::time::{sleep, timeout};
+use poise::serenity_prelude as serenity;
+use types::AnimeGuess;
 
 mod graphql_queries;
 mod anime_guessing_game;
@@ -10,141 +13,120 @@ mod types;
 mod helpers;
 mod anime_year_duration;
 mod group_scores;
-mod sql_queries;
+mod database;
 mod anime_guessing_helpers; 
+mod commands;
 
-struct Handler;
+type Error = Box<dyn std::error::Error + Send + Sync>;
+type Context<'a> = poise::Context<'a, Data, Error>;
 
-#[async_trait]
-impl EventHandler for Handler {
-    async fn message(&self, ctx: Context, msg: Message) {
-        let split = msg.content.split(" ");
-        let msg_content: Vec<String> = split.map(String::from).collect();
-        if msg_content[0] == "!yearDuration" {
-        let result_message: String = anime_year_duration::anime_in_year(&msg_content).await;
-        println!("{}", result_message);
-            if let Err(why) = msg.channel_id.say(&ctx.http, result_message).await {
-                println!("Error sending message: {:?}", why);
-            }
-        }
-        if msg_content[0] == "!addUser" {
-            group_scores::add_user(&msg_content[1]);
-        }
-        if msg_content[0] == "!animeGuess" {
-            let mut anime_info = anime_guessing_game::anime_guessing_setup(&msg_content[1]).await;
-            let mut starting_hint_wrapper = types::AnimeGuess {
-                id: anime_info.id,
-                synonyms: anime_info.synonyms.clone(),
-                hints: vec!(anime_info.hints.remove(0)),
-            };
-            let starting_hint = anime_guessing_game::process_hint(&mut starting_hint_wrapper.hints);
-            let mut hints: Vec<String> = vec!(starting_hint);
-            let start_message = format!("The anime guessing game has started for {}'s list!\n{}", &msg_content[1], hints[0]);
-            if let Err(why) = msg.channel_id.say(&ctx.http, start_message).await {
-                println!("Error sending message: {:?}", why);
-            }
-            println!("{:?}", anime_info.id);
-            loop {
-                match timeout(Duration::from_secs(300), read_next_message(&ctx, msg.channel_id)).await {
-                    Ok(Some(new_msg)) => {
-                        let (msg_head, msg_tail) = helpers::split_first_word(&new_msg.content);
-                        if msg_head == "!hint" {
-                            let mut no_of_hints = 1;
-                            match msg_tail.parse::<u64>() {
-                                Ok(n) => if n > 0 && n <= 10 {no_of_hints = n},
-                                Err(e) => (),
-                            }
-                            for i in 0..no_of_hints {
-                                let hint_message = anime_guessing_game::process_hint(&mut anime_info.hints);
-                                hints.push(hint_message);
-                            }
-                            if let Err(why) = msg.channel_id.say(&ctx.http, helpers::display_str_vec(&hints)).await {
-                                println!("Error sending message: {:?}", why);
-                            }
-                        }
-                        if msg_head == "!guess" {
-                            let result = anime_guessing_game::process_guess(&msg_tail, &anime_info.synonyms).await;
-                            if result {
-                                let correct_message = format!("You guessed right! The anime was https://anilist.co/anime/{}", anime_info.id);
-                                if let Err(why) = msg.channel_id.say(&ctx.http, correct_message).await {
-                                    println!("Error sending message: {:?}", why);
-                                }
-                                break;
-                            } else {
-                                if let Err(why) = msg.channel_id.say(&ctx.http, "You guessed wrong!").await {
-                                    println!("Error sending message: {:?}", why);
-                                }
-                            }
-
-                        }  
-                        if msg_head == "!quit" {
-                            if let Err(why) = msg.channel_id.say(&ctx.http, "You've quit the guessing game").await {
-                                println!("Error sending message: {:?}", why);
-                            }
-                            break;
-                        }
-                        if msg_head == "!giveUp" {
-                            let give_up_message = format!("You've given up, the anime was: https://anilist.co/anime/{}", anime_info.id);
-                            if let Err(why) = msg.channel_id.say(&ctx.http, give_up_message).await {
-                                println!("Error sending message: {:?}", why);
-                            }
-                            break;
-                        } 
-                    },
-                    Ok(None) => {
-                        println!("No message received within the timeout period");
-                        if let Err(why) = msg.channel_id.say(&ctx.http, "The bot timed out").await {
-                            println!("Error sending message: {:?}", why);
-                        }
-                        break;
-                    },
-                    Err(_) => {
-                        println!("Timeout occurred, exiting loop");
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    async fn ready(&self, _: Context, ready: Ready) {
-        println!("{} is connected!", ready.user.name);
-    }
+pub struct Data {
+    votes: Mutex<HashMap<String, u32>>,
 }
 
-async fn read_next_message(ctx: &Context, channel_id: ChannelId) -> Option<Message> {
-    let http = &ctx.http;
-    loop {
-        match http.get_messages(channel_id, None, Some(1)).await {
-            Ok(messages) => {
-                if let Some(new_message) = messages.get(0) {
-                    return Some(new_message.clone());
-                }
-            }
-            Err(why) => {
-                println!("Error fetching messages: {:?}", why);
-                return None;
+const ANIME_GUESSING_DB: &str = "/databases/animeGuessing.db";
+
+async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
+    // This is our custom error handler
+    // They are many errors that can occur, so we only handle the ones we want to customize
+    // and forward the rest to the default handler
+    match error {
+        poise::FrameworkError::Setup { error, .. } => panic!("Failed to start bot: {:?}", error),
+        poise::FrameworkError::Command { error, ctx, .. } => {
+            println!("Error in command `{}`: {:?}", ctx.command().name, error,);
+        }
+        error => {
+            if let Err(e) = poise::builtins::on_error(error).await {
+                println!("Error while handling error: {}", e)
             }
         }
-        sleep(Duration::from_millis(250)).await;
     }
 }
 
 #[tokio::main]
 async fn main() {
+    //env_logger::init();
+    start_db();
+    // FrameworkOptions contains all of poise's configuration option in one struct
+    // Every option can be omitted to use its default value
+    let options = poise::FrameworkOptions {
+        commands: vec![
+                    commands::help(), 
+                    commands::animeguess(),
+                    commands::hint(),
+                    commands::guess(),
+                    commands::giveup(), 
+                    ],
+        prefix_options: poise::PrefixFrameworkOptions {
+            prefix: Some("~".into()),
+            edit_tracker: Some(Arc::new(poise::EditTracker::for_timespan(
+                Duration::from_secs(3600),
+            ))),
+            additional_prefixes: vec![
+                poise::Prefix::Literal("hey bot"),
+                poise::Prefix::Literal("hey bot,"),
+            ],
+            ..Default::default()
+        },
+        // The global error handler for all error cases that may occur
+        on_error: |error| Box::pin(on_error(error)),
+        // This code is run before every command
+        pre_command: |ctx| {
+            Box::pin(async move {
+                println!("Executing command {}...", ctx.command().qualified_name);
+            })
+        },
+        // This code is run after a command if it was successful (returned Ok)
+        post_command: |ctx| {
+            Box::pin(async move {
+                println!("Executed command {}!", ctx.command().qualified_name);
+            })
+        },
+        // Every command invocation must pass this check to continue execution
+        command_check: Some(|ctx| {
+            Box::pin(async move {
+                if ctx.author().id == 123456789 {
+                    return Ok(false);
+                }
+                Ok(true)
+            })
+        }),
+        // Enforce command checks even for owners (enforced by default)
+        // Set to true to bypass checks, which is useful for testing
+        skip_checks_for_owners: false,
+        event_handler: |_ctx, event, _framework, _data| {
+            Box::pin(async move {
+                println!(
+                    "Got an event in event handler: {:?}",
+                    event.snake_case_name()
+                );
+                Ok(())
+            })
+        },
+        ..Default::default()
+    };
+
+    let framework = poise::Framework::builder()
+        .setup(move |ctx, _ready, framework| {
+            Box::pin(async move {
+                println!("Logged in as {}", _ready.user.name);
+                poise::builtins::register_globally(ctx, &framework.options().commands).await?;
+                Ok(Data {
+                    votes: Mutex::new(HashMap::new()),
+                })
+            })
+        })
+        .options(options)
+        .build();
+
     let token = env::var("DISCORD_TOKEN")
-        .expect("Expected a token in the environment");
+        .expect("Missing `DISCORD_TOKEN` env var, see README for more information.");
+    let intents =
+        serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT;
 
-    let intents = GatewayIntents::GUILD_MESSAGES
-    | GatewayIntents::DIRECT_MESSAGES
-    | GatewayIntents::MESSAGE_CONTENT;
+    let client = serenity::ClientBuilder::new(token, intents)
+        .framework(framework)
+        .await;
 
-    let mut client = Client::builder(&token, intents)
-        .event_handler(Handler)
-        .await
-        .expect("Err creating client");
-
-    if let Err(why) = client.start().await {
-        println!("Client error: {:?}", why);
-    }
+    client.unwrap().start().await.unwrap()
 }

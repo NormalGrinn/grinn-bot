@@ -60,6 +60,23 @@ struct Media {
     synonyms: Vec<String>,
 }
 
+fn get_all_names(v: &Vec<Entry>) -> Vec<String> {
+    let mut names: Vec<String> = Vec::new();
+    for e in v {
+        if let Some(romaji) = &e.media.title.romaji {
+            names.push(romaji.clone());
+        }
+        if let Some(english) = &e.media.title.english {
+            names.push(english.clone());
+        }
+        if let Some(native) = &e.media.title.native {
+            names.push(native.clone());
+        }
+        names.append(&mut e.media.synonyms.clone());
+    }
+    names
+}
+
 fn generate_hint(entry_info: &Entry) -> types::AnimeGuess {
     let anime_id = entry_info.media.id;
     let mut hints: Vec<types::Hint> = Vec::new();
@@ -151,6 +168,8 @@ fn rank_weight(number: u64) -> String {
     }
 }
 
+// Takes a vector of hints and return a hint based on one of the hints in the vector
+// Mutates the vector
 pub fn process_hint(remaining_hints: &mut Vec<types::Hint>) -> String {
     let potential_hint = helpers::get_random_element_from_vec(remaining_hints);
     let hint: String;
@@ -162,7 +181,7 @@ pub fn process_hint(remaining_hints: &mut Vec<types::Hint>) -> String {
             types::Hint::UserScore(x) => { hint = format!("You gave this anime a **{}** score", rank_weight(x))},
             types::Hint::AverageScore(x) => hint = format!("On AL this anime has a **{}** average score", rank_weight(x)),
             types::Hint::Format(s) => hint = format!("The format of this anime is: **{}**", s),
-            types::Hint::Season(s) => hint = format!("This anime aired in the {} **season**", s),
+            types::Hint::Season(s) => hint = format!("This anime aired in the **{}** season", s),
             types::Hint::Source(s) => hint = format!("The source of this anime is: **{}**", s),
             types::Hint::Genres(mut vs) => {
                 let potential_genre = helpers::get_random_element_from_vec(&mut vs);
@@ -225,7 +244,7 @@ async fn add_anime_info(anime_id: u64, hints: &mut Vec<types::Hint>) {
     }
 }
 
-pub async fn anime_guessing_setup(userName: &str) -> AnimeGuess {
+pub async fn anime_guessing_setup(userName: &str) -> (AnimeGuess, Vec<String>) {
     let client = Client::new();
     let json = json!(
         {
@@ -245,9 +264,10 @@ pub async fn anime_guessing_setup(userName: &str) -> AnimeGuess {
                 .text()
                 .await;
     let result: Response = serde_json::from_str(&resp.unwrap()).unwrap();
+    let names = get_all_names(& result.data.MediaListCollection.lists[0].entries);
     let mut rng = OsRng;
     let chosen_entry: usize = rng.gen_range(0..result.data.MediaListCollection.lists[0].entries.len());
     let mut anime_hints = generate_hint(&result.data.MediaListCollection.lists[0].entries[chosen_entry]);
     add_anime_info(anime_hints.id, &mut anime_hints.hints).await;
-    anime_hints
+    (anime_hints, names)
 }
