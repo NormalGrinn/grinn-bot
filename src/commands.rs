@@ -1,11 +1,21 @@
 use crate::types;
 use crate::{Context, Error};
-use rusqlite::{Connection, Result};
-use serenity::model::channel;
+use rusqlite::Result;
+use serenity::futures;
+use futures::{Stream, StreamExt};
 
 use crate::database;
 use crate::anime_guessing_game;
 use crate::helpers;
+
+async fn autocomplete_guess<'a>(
+    ctx: Context<'_>,
+    partial: &'a str,
+) -> impl Stream<Item = String> + 'a {
+    let names = database::get_filtered_names(&partial, ctx.channel_id().get()).await;
+    println!("{:?}", names);
+    futures::stream::iter(names)
+}
 
 /// Show this help menu
 #[poise::command(prefix_command, track_edits, slash_command)]
@@ -98,7 +108,6 @@ pub async fn giveup(
 pub async fn hint(
     ctx: Context<'_>,
     #[description = "Gives you a hint on the anime"] mut number_of_hints: u64,
-    command: Option<String>,
 ) -> Result<(), Error> {
     if number_of_hints > 10 {
         number_of_hints = 1;
@@ -135,8 +144,9 @@ pub async fn hint(
 #[poise::command(prefix_command, track_edits, slash_command)]
 pub async fn guess(
     ctx: Context<'_>,
-    #[description = "Gives the anime"] anime_guess: String,
-    command: Option<String>,
+    #[description = "Gives the anime"] 
+    #[autocomplete = "autocomplete_guess"]
+    anime_guess: String,
 ) -> Result<(), Error> {
     let channel_id = ctx.channel_id().get();
     let channel_check = database::get_anime_id_by_channel_id(ctx.channel_id().get()).await;
@@ -168,5 +178,4 @@ pub async fn guess(
             return Ok(());
         },        
     }
-    Ok(())
 }

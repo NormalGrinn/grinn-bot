@@ -1,4 +1,3 @@
-use std::{env, fmt::format};
 use reqwest::Client as ReqestClient;
 use serde_json::json;
 use serde::Deserialize;

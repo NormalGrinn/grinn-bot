@@ -1,14 +1,11 @@
-use std::{env, fmt::format};
 use reqwest::Client;
-use serde_json::{from_str, json};
+use serde_json::{json};
 use serde::Deserialize;
 use rand::rngs::OsRng;
 use tokio::time::{sleep, Duration};
 use rand::Rng;
 use strsim::damerau_levenshtein;
 
-use crate::anime_guessing_helpers::staff::get_staff;
-use crate::anime_guessing_helpers::voice_actors;
 use crate::{graphql_queries, types::AnimeGuess};
 use crate::{anime_guessing_helpers, types};
 use crate::helpers;
@@ -43,7 +40,6 @@ struct Entry {
 struct Title {
     romaji: Option<String>,
     english: Option<String>,
-    native: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -57,7 +53,6 @@ struct Media {
     averageScore: Option<u64>,
     source: Option<String>,
     title: Title,
-    synonyms: Vec<String>,
 }
 
 fn get_all_names(v: &Vec<Entry>) -> Vec<String> {
@@ -69,11 +64,8 @@ fn get_all_names(v: &Vec<Entry>) -> Vec<String> {
         if let Some(english) = &e.media.title.english {
             names.push(english.clone());
         }
-        if let Some(native) = &e.media.title.native {
-            names.push(native.clone());
-        }
-        names.append(&mut e.media.synonyms.clone());
     }
+    names.dedup();
     names
 }
 
@@ -112,14 +104,6 @@ fn generate_hint(entry_info: &Entry) -> types::AnimeGuess {
     match entry_info.media.title.english {
         Some(ref r) => titles.push(r.clone()),
         None => (),
-    }
-    
-    match entry_info.media.title.native {
-        Some(ref r) => titles.push(r.clone()),
-        None => (),
-    }
-    for e in entry_info.media.synonyms.iter() {
-        titles.push(e.to_string());
     }
     let anime_guess = types::AnimeGuess {
         id: anime_id,

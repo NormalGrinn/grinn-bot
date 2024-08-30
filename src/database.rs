@@ -1,6 +1,7 @@
 use rusqlite::{Connection, Result};
 use crate::types;
 use crate::Error;
+use strsim::jaro_winkler;
 
 const ANIME_GUESSING_PATH: &str = "databases/animeGuessing.db";
 
@@ -20,6 +21,9 @@ SELECT potential_hints FROM anime_guessing WHERE channel_id = ?1;";
 
 const GET_SYNONYMS: &str = "
 SELECT anime_synonyms FROM anime_guessing WHERE channel_id = ?1;";
+
+const GET_NAMES: &str = "
+SELECT all_names FROM anime_guessing WHERE channel_id = ?1;";
 
 const INSERT_ANIME_GUESSING: &str = "
 INSERT INTO anime_guessing VALUES (?1, ?2, ?3, ?4, ?5, ?6);
@@ -80,6 +84,32 @@ pub async fn get_hints(channel_id: u64) -> Result<(Vec<types::Hint>, Vec<String>
     let rem_hints: types::HintWrapper = conn.query_row(GET_POTENIAL_HINTS, rusqlite::params![channel_id], |row| row.get(0))?;
     let cur_hints: types::StringVecWrapper = conn.query_row(GET_HINTS, rusqlite::params![channel_id], |row| row.get(0))?;
     Ok((rem_hints.hints, cur_hints.stringvec))
+}
+
+//Filters all the names and returns the ones closest to the guess
+pub async fn get_filtered_names(partial: &str, channel_id: u64) -> Vec<String> {
+    let potentail_conn = Connection::open(ANIME_GUESSING_PATH);
+    match potentail_conn {
+        Ok(conn) => {
+            let potentail_names: Result<types::StringVecWrapper> = conn.query_row(GET_NAMES, rusqlite::params![channel_id], |row| row.get(0));
+            match potentail_names {
+                Ok(names) => {
+                    let filtered_names: Vec<String> = names.stringvec.into_iter()
+                    .filter(|e| jaro_winkler(partial, &e) > 0.6)
+                    .collect();
+                    return filtered_names
+                    },
+                Err(_) => {
+                    let nothing: Vec<String> = Vec::new();
+                    return nothing
+                },
+            }
+        },
+        Err(_) => {
+            let nothing: Vec<String> = Vec::new();
+            return nothing
+        },
+    }
 }
 
 //Sets the remaining hints and current hints
