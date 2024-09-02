@@ -1,18 +1,40 @@
 use serde::{Serialize, Deserialize};
 use rusqlite::types::{FromSql, ToSql, ToSqlOutput, Value};
-
+/**
+ * Struct for describing an AL tag
+ * name: the name of this tag
+ * rank: the rating this score has on AL
+ */
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Tag {
     pub(crate) name: String,
     pub(crate) rank: u64,
 }
 
+/**
+ * Struct for describing a staff member
+ * name: the full romaji name of this staff member
+ * role: the role they have on this show
+ */
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Staff {
     pub(crate) name: String,
     pub(crate) role: String,
 }
-
+/**
+ * Enum for describing the various types a hint can take on
+ * Season: the airing season
+ * SeasonYear: the year it started airing
+ * Format: the format it was aired in (e.g. TV, OVA, ONA, etc)
+ * Genres: a vector containing all the genres in string from
+ * Studios: a vector of all the primary studios in string form
+ * Voice Actors: a vector of all the VAs who voiced a main character
+ * Tag: a vector of tags
+ * Staff: a vectoring containing staff that worked on the show (who are not VAs)
+ * AverageScore: the average score as listed on AL
+ * Source: the source material of the show
+ * UserScore: the score this user gave this show
+ */
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Hint {
     Season(String),
@@ -35,11 +57,13 @@ pub struct AnimeGuess {
     pub(crate) hints: Vec<Hint>, 
 }
 
+// Wrapper used for serialzing a Hint vector for SQL queries
 #[derive(Serialize, Deserialize, Debug)]
 pub struct HintWrapper {
     pub(crate) hints: Vec<Hint>,
 }
 
+// Wrapper used for serializng a String vector for SQL queries
 #[derive(Serialize, Deserialize, Debug)]
 pub struct StringVecWrapper {
     pub(crate) stringvec: Vec<String>,
