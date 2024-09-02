@@ -124,31 +124,25 @@ pub async fn process_guess(guess: &str, titles: &Vec<String>) -> bool {
     false
 }
 
-// The ranks are:
-// 0: unscored
-// 0 < x < 20 very low 
-// 20 < x =< 50 low
-// 50 < x =< 65 middling 
-// 65 < x =< 75 high
-// 75 < x =< 90 very high
-// 90 < x =< 100 extremly high
 fn rank_weight(number: u64) -> String {
     if number == 0 {
-        "unscored".to_string()
-    } else if number > 0 && number < 20 {
-        "very low".to_string()
-    } else if number >= 20 && number <= 50 {
-        "low".to_string()
-    } else if number > 50 && number <= 65 {
-        "middling".to_string()
-    } else if number > 65 && number <= 75 {
-        "high".to_string()
+        "0: unscored".to_string()
+    } else if number >= 1 && number <= 15 {
+        "1-15".to_string()
+    } else if number > 15 && number <= 30 {
+        "16-30".to_string()
+    } else if number > 30 && number <= 45 {
+        "31-45".to_string()
+    } else if number > 45 && number <= 60 {
+        "46-60".to_string()
+    } else if number > 60 && number <= 75 {
+        "61-75".to_string()
     } else if number > 75 && number <= 90 {
-        "very high".to_string()
+        "76-90".to_string()
     } else if number > 90 && number <= 100 {
-        "extremely high".to_string()
+        "91-100".to_string()
     } else {
-        "out of range".to_string() // Optional: to handle cases where number > 100
+        ">100: out of range".to_string() // Optional: to handle cases where number > 100
     }
 }
 
@@ -162,8 +156,8 @@ pub fn process_hint(remaining_hints: &mut Vec<types::Hint>) -> String {
         Some(chosen_hint) =>     
         match chosen_hint {
             types::Hint::SeasonYear(x) => hint = format!("This anime started airing in the year **{}**", x),
-            types::Hint::UserScore(x) => { hint = format!("You gave this anime a **{}** score", rank_weight(x))},
-            types::Hint::AverageScore(x) => hint = format!("On AL this anime has a **{}** average score", rank_weight(x)),
+            types::Hint::UserScore(x) => { hint = format!("You scored this anime **{}**", rank_weight(x))},
+            types::Hint::AverageScore(x) => hint = format!("On AL this anime has **{}** for the average score", rank_weight(x)),
             types::Hint::Format(s) => hint = format!("The format of this anime is: **{}**", s),
             types::Hint::Season(s) => hint = format!("This anime aired in the **{}** season", s),
             types::Hint::Source(s) => hint = format!("The source of this anime is: **{}**", s),
@@ -228,7 +222,7 @@ async fn add_anime_info(anime_id: u64, hints: &mut Vec<types::Hint>) {
     }
 }
 
-pub async fn anime_guessing_setup(userName: &str) -> (AnimeGuess, Vec<String>) {
+pub async fn anime_guessing_setup(userName: &str, list_num:usize) -> (AnimeGuess, Vec<String>) {
     let client = Client::new();
     let json = json!(
         {
@@ -248,10 +242,10 @@ pub async fn anime_guessing_setup(userName: &str) -> (AnimeGuess, Vec<String>) {
                 .text()
                 .await;
     let result: Response = serde_json::from_str(&resp.unwrap()).unwrap();
-    let names = get_all_names(& result.data.MediaListCollection.lists[0].entries);
+    let names = get_all_names(& result.data.MediaListCollection.lists[list_num].entries);
     let mut rng = OsRng;
-    let chosen_entry: usize = rng.gen_range(0..result.data.MediaListCollection.lists[0].entries.len());
-    let mut anime_hints = generate_hint(&result.data.MediaListCollection.lists[0].entries[chosen_entry]);
+    let chosen_entry: usize = rng.gen_range(0..result.data.MediaListCollection.lists[list_num].entries.len());
+    let mut anime_hints = generate_hint(&result.data.MediaListCollection.lists[list_num].entries[chosen_entry]);
     add_anime_info(anime_hints.id, &mut anime_hints.hints).await;
     (anime_hints, names)
 }
