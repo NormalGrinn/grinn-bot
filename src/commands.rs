@@ -41,8 +41,13 @@ pub async fn help(
 pub async fn animeguess(
     ctx: Context<'_>,
     #[description = "Start a round of the anime guessing game. Usage: /animeguess (AL username)"] username: String,
-    //command: Option<String>,
+    #[description = "Optional parameter for selecting which list you want to use"] list_number: Option<usize>,
 ) -> Result<(), Error> {
+    let mut list = 0;
+    match list_number {
+        Some(x) => list = x - 1,
+        None => (),
+    };
     let channel_check = database::get_anime_id_by_channel_id(ctx.channel_id().get()).await;
     match channel_check {
         Ok(x) => if x != 0 {
@@ -52,7 +57,7 @@ pub async fn animeguess(
         Err(_) => (),
     };
     ctx.defer().await?;
-    let (mut entry_info, names) = anime_guessing_game::anime_guessing_setup(&username).await;
+    let (mut entry_info, names) = anime_guessing_game::anime_guessing_setup(&username, list).await;
     let mut starting_hint_wrapper = types::AnimeGuess {
         id: entry_info.id,
         synonyms: entry_info.synonyms.clone(),
@@ -75,7 +80,6 @@ pub async fn animeguess(
 #[poise::command(prefix_command, track_edits, slash_command)]
 pub async fn giveup(
     ctx: Context<'_>
-    //command: Option<String>,
 ) -> Result<(), Error> {
     let channel_id = ctx.channel_id().get();
     let channel_check = database::get_anime_id_by_channel_id(ctx.channel_id().get()).await;
