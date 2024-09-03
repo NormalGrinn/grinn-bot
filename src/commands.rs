@@ -161,7 +161,7 @@ pub async fn guess(
                 Ok(wrapped_synonyms) => {
                     let correct = anime_guessing_game::process_guess(&anime_guess, &wrapped_synonyms.stringvec).await;
                     if correct {
-                        let win_message = format!("You guessed right! :happy: The anime was: https://anilist.co/anime/{}", anime_id);
+                        let win_message = format!("You guessed right! <:happy:1210688855011762196> The anime was: https://anilist.co/anime/{}", anime_id);
                         ctx.say(win_message).await?;
                         let _ = database::give_up(channel_id).await;
                         return Ok(());
