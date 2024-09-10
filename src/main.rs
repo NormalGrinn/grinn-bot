@@ -1,17 +1,11 @@
 use std::{collections::HashMap, env, sync::{Arc, Mutex}, time::Duration};
 use database::start_db;
-use serenity::{
-    all::ChannelId, async_trait, model::{channel::Message, gateway::Ready}, prelude::*
-};
-use tokio::time::{sleep, timeout};
 use poise::serenity_prelude as serenity;
-use types::AnimeGuess;
 
 mod graphql_queries;
 mod anime_guessing_game;
 mod types;
 mod helpers;
-mod anime_year_duration;
 mod group_scores;
 mod database;
 mod anime_guessing_helpers; 
@@ -23,8 +17,6 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 pub struct Data {
     votes: Mutex<HashMap<String, u32>>,
 }
-
-const ANIME_GUESSING_DB: &str = "/databases/animeGuessing.db";
 
 async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     // This is our custom error handler

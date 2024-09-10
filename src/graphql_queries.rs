@@ -44,14 +44,6 @@ query ($userName: String)
 }
 ";
 
-pub const ANIMESEARCHQUERY: &str = "
-query ($animeName: String)
-{
-  Media (search: $animeName) {
-    id
-  }
-}";
-
 pub const USERANIMELISTQUERY: &str = "
 query ($userName: String)
 {
