@@ -3,7 +3,7 @@ use crate::types;
 use crate::Error;
 use strsim::jaro_winkler;
 
-const ANIME_GUESSING_PATH: &str = "databases/animeGuessing.db";
+const ANIME_GUESSING_PATH: &str = "src/databases/animeGuessing.db";
 
 const GET_ANIME_GUESSING: &str = "
 SELECT * FROM anime_guessing WHERE anime_id = ?1;

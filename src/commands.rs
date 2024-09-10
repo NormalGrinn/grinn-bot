@@ -13,8 +13,16 @@ async fn autocomplete_guess<'a>(
     partial: &'a str,
 ) -> impl Stream<Item = String> + 'a {
     let names = database::get_filtered_names(&partial, ctx.channel_id().get()).await;
-    println!("{:?}", names);
     futures::stream::iter(names)
+}
+
+async fn autocomplete_hint_type<'a>(
+    ctx: Context<'_>,
+    partial: &'a str,
+) -> impl Stream<Item = String> + 'a {
+    let types: Vec<String> = vec!("Season".to_string(), "Year".to_string(), "Format".to_string(), "Genre".to_string(), "Studio".to_string(),
+                                 "Voice Actor".to_string(), "Tag".to_string(), "Staff".to_string(), "AL Score".to_string(), "Source".to_string(), "User Score".to_string());
+    futures::stream::iter(types)
 }
 
 /// Show this help menu
@@ -63,7 +71,7 @@ pub async fn animeguess(
         synonyms: entry_info.synonyms.clone(),
         hints: vec!(entry_info.hints.remove(0)),
     };
-    let starting_hint = anime_guessing_game::process_hint(&mut starting_hint_wrapper.hints);
+    let starting_hint = anime_guessing_game::process_hint(&mut starting_hint_wrapper.hints, None);
     let gotten_hints: Vec<String> = vec!(starting_hint);
     let starting_message = format!("The anime guessing game has started for {}\n{}", username, gotten_hints[0]);
     match database::set_anime_info(ctx.channel_id().get(), entry_info, gotten_hints, names).await {
@@ -111,7 +119,11 @@ pub async fn giveup(
 #[poise::command(prefix_command, track_edits, slash_command)]
 pub async fn hint(
     ctx: Context<'_>,
-    #[description = "Gives you a hint on the anime"] mut number_of_hints: u64,
+    #[description = "Gives you a hint on the anime"] 
+    mut number_of_hints: u64,
+    #[description = "Select what type of hint you want"]
+    #[autocomplete = "autocomplete_hint_type"]
+    hint_type: Option<String>,
 ) -> Result<(), Error> {
     if number_of_hints > 10 {
         number_of_hints = 1;
@@ -124,7 +136,7 @@ pub async fn hint(
             for i in 0..number_of_hints {
                 match database::get_hints(channel_id).await {
                     Ok((mut rem_hints, mut cur_hints)) => {
-                        let hint = anime_guessing_game::process_hint(&mut rem_hints);
+                        let hint = anime_guessing_game::process_hint(&mut rem_hints, hint_type.clone());
                         cur_hints.push(hint);
                         let set_response = database::set_hints(channel_id, rem_hints, &cur_hints).await;
                         disp_hints = cur_hints;

@@ -148,8 +148,12 @@ fn rank_weight(number: u64) -> String {
 
 // Takes a vector of hints and return a hint based on one of the hints in the vector
 // Mutates the vector
-pub fn process_hint(remaining_hints: &mut Vec<types::Hint>) -> String {
-    let potential_hint = helpers::get_random_element_from_vec(remaining_hints);
+pub fn process_hint(remaining_hints: &mut Vec<types::Hint>, hint_type: Option<String>) -> String {
+    let potential_hint: Option<types::Hint>;
+    match hint_type {
+        Some(s) => potential_hint = helpers::get_typed_hint(remaining_hints, s.as_str()),
+        None => potential_hint = helpers::get_random_element_from_vec(remaining_hints),
+    }
     let hint: String;
     match potential_hint {
         None => hint = format!("No hints are left!"),
