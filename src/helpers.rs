@@ -2,13 +2,6 @@ use rand::Rng;
 
 use crate::types;
 
-pub fn split_first_word(input: &str) -> (String, String) {
-    let mut parts = input.splitn(2, ' ');
-    let first_part = parts.next().unwrap_or("").to_string();
-    let second_part = parts.next().unwrap_or("").to_string();
-    (first_part, second_part)
-}
-
 pub fn get_random_element_from_vec<T>(v: &mut Vec<T>) -> Option<T> {
     if v.is_empty() {
         None

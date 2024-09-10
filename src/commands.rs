@@ -1,8 +1,7 @@
-use crate::types;
 use crate::{Context, Error};
 use rusqlite::Result;
 use serenity::futures;
-use futures::{Stream, StreamExt};
+use futures::{Stream};
 
 use crate::database;
 use crate::anime_guessing_game;

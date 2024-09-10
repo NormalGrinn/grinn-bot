@@ -1,5 +1,5 @@
 use serde::{Serialize, Deserialize};
-use rusqlite::types::{FromSql, ToSql, ToSqlOutput, Value};
+use rusqlite::types::{FromSql, ToSql, ToSqlOutput};
 /**
  * Struct for describing an AL tag
  * name: the name of this tag

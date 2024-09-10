@@ -1,5 +1,5 @@
 use reqwest::Client;
-use serde_json::{json};
+use serde_json::json;
 use serde::Deserialize;
 use rand::rngs::OsRng;
 use tokio::time::{sleep, Duration};
