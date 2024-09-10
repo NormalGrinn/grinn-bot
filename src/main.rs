@@ -11,7 +11,6 @@ mod graphql_queries;
 mod anime_guessing_game;
 mod types;
 mod helpers;
-mod anime_year_duration;
 mod group_scores;
 mod database;
 mod anime_guessing_helpers; 
