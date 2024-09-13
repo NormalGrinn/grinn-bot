@@ -33,7 +33,7 @@ pub fn get_typed_hint(v: &mut Vec<types::Hint>, hint_type: &str) -> Option<types
             types::Hint::VoiceActors(_) => { if hint_type == "Voice Actor" { return Some(v.remove(i)) } },
             types::Hint::Tag(_) => { if hint_type == "Tag" { return Some(v.remove(i)) } },
             types::Hint::Staff(_) => { if hint_type == "Staff" { return Some(v.remove(i)) } },
-            types::Hint::AverageScore(_) => { if hint_type == "ALscore" { return Some(v.remove(i)) } },
+            types::Hint::AverageScore(_) => { if hint_type == "AL Score" { return Some(v.remove(i)) } },
             types::Hint::Source(_) => { if hint_type == "Source" { return Some(v.remove(i)) } },
             types::Hint::UserScore(_) => { if hint_type == "User Score" { return Some(v.remove(i)) } },
         }
