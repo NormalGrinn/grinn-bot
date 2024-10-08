@@ -3,6 +3,7 @@ use rusqlite::Result;
 use serenity::futures;
 use futures::{Stream};
 use strsim::jaro_winkler;
+use poise::serenity_prelude as serenity;
 
 use crate::database;
 use crate::anime_guessing_game;
@@ -210,13 +211,53 @@ pub async fn guess(
 pub async fn create_team(
     ctx: Context<'_>,
     #[description = "The first team member, this should be you"] 
-    member1: String,
+    member1: serenity::User,
     #[description = "The name of your team"] 
     team_name: String,
     #[description = "The second team member"] 
-    member2: Option<String>,
+    member2: Option<serenity::User>,
     #[description = "The third team member"] 
-    member3: Option<String>,
+    member3: Option<serenity::User>,
 ) -> Result<(), Error> {
-    todo!()
+    let mut members = vec![member1];
+    match member2 {
+        Some(x) => members.push(x),
+        None => (),
+    }
+    match member3 {
+        Some(x) => members.push(x),
+        None => (),
+    }
+    let res = database::create_team(members, team_name).await;
+    match res {
+        Ok(_) => {
+            ctx.say("Team has been created succesfully").await?;
+            return Ok(())
+        },
+        Err(_) => {
+            ctx.say("An error occured").await?;
+            return Ok(())
+        },
+    }
+}
+
+#[poise::command(prefix_command, track_edits, slash_command)]
+pub async fn display_teams(
+    ctx: Context<'_>
+) -> Result<(), Error> {
+    let members = database::get_teams().await;
+    match members {
+        Ok(res) => {
+            let mut message: Vec<String> = Vec::new();
+            for (name, team) in res {
+                message.push(format!("Member: {} in team: {}", name, team))
+            }
+            ctx.say(helpers::display_str_vec(&message)).await?;
+            return Ok(())
+        },
+        Err(_) => {
+            ctx.say("An error occured").await?;
+            return Ok(())
+        },
+    }
 }

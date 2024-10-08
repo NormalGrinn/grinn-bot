@@ -1,8 +1,11 @@
 use rusqlite::{Connection, Result};
 use crate::types;
 use strsim::jaro_winkler;
+use std::hash::{DefaultHasher, Hash, Hasher};
+use poise::serenity_prelude as serenity;
 
-const ANIME_GUESSING_PATH: &str = "src/databases/animeGuessing.db";
+const ANIME_GUESSING_PATH: &str = "databases/animeGuessing.db";
+const TEAM_SWAPPING_PATH: &str = "databases/teamSwaps.db";
 
 const GET_ANIME_GUESSING_ID: &str = "
 SELECT anime_guessing.anime_id FROM anime_guessing WHERE channel_id = ?1;
@@ -127,5 +130,53 @@ pub async fn set_anime_info(channel_id: u64, entry_info: types::AnimeGuess, gott
     let wrapped_synonyms = types::StringVecWrapper { stringvec: entry_info.synonyms };
     let res = conn.execute(INSERT_ANIME_GUESSING, ( channel_id, &entry_info.id, &wrapped_hints, &wrapped_gotten_hints, 
                                                                         &wrapped_synonyms, &wrapped_names))?;
+    Ok(res)
+}
+
+pub async fn get_teams() -> Result<Vec<(String, String)>> {
+    const GET_TEAMS: &str = "
+    SELECT members.name, teams.team_name
+    FROM members
+    INNER JOIN teams ON members.team = teams.team_id; 
+    ";
+    let mut members: Vec<(String, String)> = Vec::new();
+    let conn = Connection::open(TEAM_SWAPPING_PATH)?;
+    let mut team_query = conn.prepare(GET_TEAMS)?;
+    let team_iter = team_query.query_map([], |row| {
+        Ok((
+            row.get::<_, String>(0)?,
+            row.get::<_, String>(1)?,
+        ))
+    })?;
+    for member in team_iter {
+        let (name, team_name) = member?;
+        println!("Member: {}, Team: {}", name, team_name);
+        members.push((name, team_name))
+    }
+    Ok(members)
+}
+
+
+/// Creates a team with 1-3 members and a name in the database
+/// Creates a member in the member table for each user
+pub async fn create_team(members: Vec<serenity::User>, team_name: String) -> Result<usize> {
+    const CREATE_TEAM: &str = "
+    INSERT INTO teams (team_id, team_name)
+    VALUES(?1, ?2);
+    ";
+    const CREATE_MEMBER: &str = "
+    INSERT INTO members VALUES (?1, ?2, ?3);
+    ";
+    let mut hasher = DefaultHasher::new();
+    team_name.hash(&mut hasher);
+    let team_id: i64 = hasher.finish() as i64;
+    let conn = Connection::open(TEAM_SWAPPING_PATH)?;
+    let res = conn.execute(CREATE_TEAM, rusqlite::params![team_id, team_name])?;
+    println!("{:?}", res);
+    for member in members {
+        let id = member.id.get();
+        let name = member.name;
+        conn.execute(CREATE_MEMBER, rusqlite::params![id, name, team_id])?;
+    };
     Ok(res)
 }

@@ -38,7 +38,7 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
 #[tokio::main]
 async fn main() {
     //env_logger::init();
-    start_db();
+    //start_db();
     // FrameworkOptions contains all of poise's configuration option in one struct
     // Every option can be omitted to use its default value
     let options = poise::FrameworkOptions {
@@ -49,6 +49,7 @@ async fn main() {
                     commands::guess(),
                     commands::giveup(), 
                     commands::create_team(),
+                    commands::display_teams()
                     ],
         prefix_options: poise::PrefixFrameworkOptions {
             prefix: Some("~".into()),
