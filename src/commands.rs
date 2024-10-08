@@ -64,8 +64,10 @@ pub async fn help(
 #[poise::command(prefix_command, track_edits, slash_command)]
 pub async fn animeguess(
     ctx: Context<'_>,
-    #[description = "Start a round of the anime guessing game. Usage: /animeguess (AL username)"] username: String,
-    #[description = "Optional parameter for selecting which list you want to use"] list_number: Option<usize>,
+    #[description = "Start a round of the anime guessing game. Usage: /animeguess (AL username)"] 
+    username: String,
+    #[description = "Optional parameter for selecting which list you want to use"] 
+    list_number: Option<usize>,
 ) -> Result<(), Error> {
     let mut list = 0;
     match list_number {
@@ -202,4 +204,19 @@ pub async fn guess(
             return Ok(());
         },        
     }
+}
+
+#[poise::command(prefix_command, track_edits, slash_command)]
+pub async fn create_team(
+    ctx: Context<'_>,
+    #[description = "The first team member, this should be you"] 
+    member1: String,
+    #[description = "The name of your team"] 
+    team_name: String,
+    #[description = "The second team member"] 
+    member2: Option<String>,
+    #[description = "The third team member"] 
+    member3: Option<String>,
+) -> Result<(), Error> {
+    todo!()
 }

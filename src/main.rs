@@ -48,6 +48,7 @@ async fn main() {
                     commands::hint(),
                     commands::guess(),
                     commands::giveup(), 
+                    commands::create_team(),
                     ],
         prefix_options: poise::PrefixFrameworkOptions {
             prefix: Some("~".into()),
