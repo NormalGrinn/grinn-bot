@@ -43,13 +43,14 @@ async fn main() {
     // Every option can be omitted to use its default value
     let options = poise::FrameworkOptions {
         commands: vec![
-                    commands::help(), 
-                    commands::animeguess(),
-                    commands::hint(),
-                    commands::guess(),
-                    commands::giveup(), 
-                    commands::create_team(),
-                    commands::display_teams()
+                    commands::help::help(), 
+                    commands::animeguess::animeguess(),
+                    commands::hint::hint(),
+                    commands::guess::guess(),
+                    commands::giveup::giveup(), 
+                    commands::create_team::create_team(),
+                    commands::display_teams::display_teams(),
+                    commands::delete_teams::delete_teams(),
                     ],
         prefix_options: poise::PrefixFrameworkOptions {
             prefix: Some("~".into()),

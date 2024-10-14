@@ -180,3 +180,16 @@ pub async fn create_team(members: Vec<serenity::User>, team_name: String) -> Res
     };
     Ok(res)
 }
+
+pub async fn delete_teams() -> Result<usize> {
+    const DELETE_MEMBERS: &str = "
+    DELETE FROM members
+    ";
+    const DELETE_TEAMS: &str = "
+    DELETE FROM teams;
+    ";
+    let conn = Connection::open(TEAM_SWAPPING_PATH)?;
+    let mut res = conn.execute(DELETE_MEMBERS, ())?;
+    res += conn.execute(DELETE_TEAMS, ())?;
+    Ok(res)
+}
