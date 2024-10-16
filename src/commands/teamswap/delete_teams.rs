@@ -7,13 +7,13 @@ use crate::database;
 pub async fn delete_teams(
     ctx: Context<'_>
 ) -> Result<(), Error> {
-    match database::delete_teams().await {
+    match database::delete_teams() {
         Ok(_) => {
             ctx.say("Teams were deleted succesfully").await?;
             return Ok(())
         },
         Err(_) => {
-            ctx.say("An error occured deliting the teams").await?;
+            ctx.say("An error occured deleting the teams").await?;
             return Ok(())
         },
     }

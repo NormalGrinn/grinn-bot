@@ -35,11 +35,11 @@ pub async fn create_team(
                 }
             },
             Err(_) => {
-                ctx.say("An error has occured").await?;
+                ctx.say("An error has occured checking roles").await?;
                 return Ok(())
             },
         }
-        match team_swap_utils::check_if_already_participating(m).await {
+        match database::check_if_user_in_team(m.id.get()) {
             Ok(b) => {
                 if b {
                     let message = format!("{} already is in another team therefore a team cannot be created", m.global_name.clone().unwrap());
@@ -47,8 +47,23 @@ pub async fn create_team(
                     return  Ok(())
                 }
             },
-            Err(_) => {
-                ctx.say("An error has occured").await?;
+            Err(e) => {
+                println!("{:?}", e);
+                ctx.say("An error has occured checking if already in team").await?;
+                return Ok(())
+            },
+        }
+        match database::check_if_user_exists(m.id.get()) {
+            Ok(b) => {
+                if !b {
+                    let message = format!("{} has not joined yet", m.global_name.clone().unwrap());
+                    ctx.say(message).await?;
+                    return  Ok(())
+                }
+            },
+            Err(e) => {
+                println!("{:?}", e);
+                ctx.say("An error has occured checking if users exists").await?;
                 return Ok(())
             },
         }
@@ -59,11 +74,11 @@ pub async fn create_team(
             return Ok(());
         },
         Err(_) =>  {
-            ctx.say("An error has occured").await?;
+            ctx.say("An error has occured checking teams").await?;
             return Ok(())
         },
     }
-    let res = database::create_team(members, team_name).await;
+    let res = database::create_team(members, team_name);
     match res {
         Ok(_) => {
             ctx.say("Team has been created succesfully").await?;

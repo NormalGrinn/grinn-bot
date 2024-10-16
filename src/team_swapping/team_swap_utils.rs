@@ -20,18 +20,8 @@ pub async fn check_host_role(user: &serenity::User, ctx: &Context<'_>) -> Result
     return Ok(res?);
 }
 
-pub async fn check_if_already_participating(user: &serenity::User) -> Result<bool, Error> {
-    let user_id = user.id.get();
-    match database::check_if_user_in_db(user_id).await {
-        Ok(b) => {
-            if b { return Ok(true) } else { return Ok(false) };
-        },
-        Err(_) => return Err("An error has occured fetching from the database".into()),
-    }
-}
-
 pub async fn check_if_team_exists(team_name: &String) -> Result<bool, Error> {
-    match database::check_if_team_exists(team_name).await {
+    match database::check_if_team_exists(team_name) {
         Ok(b) => {
             if b { return Ok(true) } else { return Ok(false) };
         },

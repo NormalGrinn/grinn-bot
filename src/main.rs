@@ -67,6 +67,8 @@ async fn main() {
                     commands::teamswap::create_team::create_team(),
                     commands::teamswap::display_teams::display_teams(),
                     commands::teamswap::delete_teams::delete_teams(),
+                    commands::teamswap::submit_anime::submit_anime(),
+                    commands::teamswap::remove_submission::remove_submission(),
                     ],
         prefix_options: poise::PrefixFrameworkOptions {
             prefix: Some("~".into()),
