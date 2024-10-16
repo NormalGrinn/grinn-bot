@@ -193,3 +193,31 @@ pub async fn delete_teams() -> Result<usize> {
     res += conn.execute(DELETE_TEAMS, ())?;
     Ok(res)
 }
+
+pub async fn check_if_user_in_db(user_id :u64) -> Result<bool> {
+    const CHECK_QUERY: &str = "
+    SELECT COUNT(*) FROM members WHERE member_id = (?1);
+    ";
+    let conn = Connection::open(TEAM_SWAPPING_PATH)?;
+    let mut query = conn.prepare(CHECK_QUERY)?;
+    let count: u64 = query.query_row(rusqlite::params![user_id], |row| row.get(0))?;
+    if count == 0 {
+        return Ok(false)
+    } else {
+        return Ok(true);
+    }
+}
+
+pub async fn check_if_team_exists(team_name: &String) -> Result<bool> {
+    const CHECK_QUERY: &str = "
+    SELECT COUNT(*) FROM teams WHERE team_name = (?1);
+    "; 
+    let conn = Connection::open(TEAM_SWAPPING_PATH)?;
+    let mut query = conn.prepare(CHECK_QUERY)?;
+    let count: u64 = query.query_row(rusqlite::params![team_name], |row| row.get(0))?;
+    if count == 0 {
+        return Ok(false)
+    } else {
+        return Ok(true);
+    }
+}

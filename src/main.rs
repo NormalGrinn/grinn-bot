@@ -1,6 +1,7 @@
 use std::{collections::HashMap, env, sync::{Arc, Mutex}, time::Duration};
 use database::start_db;
 use poise::serenity_prelude as serenity;
+use dotenvy::dotenv;
 
 mod graphql_queries;
 mod anime_guessing_game;
@@ -10,6 +11,7 @@ mod group_scores;
 mod database;
 mod anime_guessing_helpers; 
 mod commands;
+mod team_swapping;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
@@ -38,19 +40,33 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
 #[tokio::main]
 async fn main() {
     //env_logger::init();
-    //start_db();
     // FrameworkOptions contains all of poise's configuration option in one struct
     // Every option can be omitted to use its default value
+    dotenv().ok();
+
+    match env::var("SWAPPER_ROLE_ID") {
+        Ok(id) => println!("Swapper role ID: {}", id),
+        Err(_) => println!("Swapper role ID not properly set"),
+    }
+    match env::var("HOST_ROLE_ID") {
+        Ok(id) => println!("Host role ID: {}", id),
+        Err(_) => println!("Host role ID not properly set"),
+    }
+    match env::var("GUILD_ID") {
+        Ok(id) => println!("Guild ID: {}", id),
+        Err(_) => println!("Guild ID not properly set"),
+    }
+
     let options = poise::FrameworkOptions {
         commands: vec![
                     commands::help::help(), 
-                    commands::animeguess::animeguess(),
-                    commands::hint::hint(),
-                    commands::guess::guess(),
-                    commands::giveup::giveup(), 
-                    commands::create_team::create_team(),
-                    commands::display_teams::display_teams(),
-                    commands::delete_teams::delete_teams(),
+                    commands::anime_guessing::animeguess::animeguess(),
+                    commands::anime_guessing::hint::hint(),
+                    commands::anime_guessing::guess::guess(),
+                    commands::anime_guessing::giveup::giveup(), 
+                    commands::teamswap::create_team::create_team(),
+                    commands::teamswap::display_teams::display_teams(),
+                    commands::teamswap::delete_teams::delete_teams(),
                     ],
         prefix_options: poise::PrefixFrameworkOptions {
             prefix: Some("~".into()),

@@ -1,12 +1,8 @@
 use crate::{Context, Error};
 use rusqlite::Result;
-use serenity::futures;
-use strsim::jaro_winkler;
-use poise::serenity_prelude as serenity;
 
 use crate::database;
 use crate::anime_guessing_game;
-use crate::helpers;
 
 #[poise::command(prefix_command, track_edits, slash_command)]
 pub async fn animeguess(
