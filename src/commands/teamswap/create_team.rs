@@ -68,7 +68,7 @@ pub async fn create_team(
             },
         }
     }
-    match team_swap_utils::check_if_team_exists(&team_name).await {
+    match team_swap_utils::check_if_team_exists(&team_name) {
         Ok(b) => if b {
             ctx.say("A team with this name already exists, please pick another one").await?;
             return Ok(());
