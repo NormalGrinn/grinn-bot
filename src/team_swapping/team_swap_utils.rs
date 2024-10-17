@@ -20,7 +20,7 @@ pub async fn check_host_role(user: &serenity::User, ctx: &Context<'_>) -> Result
     return Ok(res?);
 }
 
-pub async fn check_if_team_exists(team_name: &String) -> Result<bool, Error> {
+pub fn check_if_team_exists(team_name: &String) -> Result<bool, Error> {
     match database::check_if_team_exists(team_name) {
         Ok(b) => {
             if b { return Ok(true) } else { return Ok(false) };

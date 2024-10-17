@@ -1,9 +1,10 @@
 use rusqlite::{Connection, OptionalExtension, Result};
-use ::serenity::model::connection;
 use crate::types;
 use strsim::jaro_winkler;
 use std::{collections::HashMap, hash::{DefaultHasher, Hash, Hasher}};
 use poise::serenity_prelude as serenity;
+use std::time::SystemTime;
+use chrono::{Date, DateTime, Utc};
 
 const ANIME_GUESSING_PATH: &str = "databases/animeGuessing.db";
 const TEAM_SWAPPING_PATH: &str = "databases/teamSwaps.db";
@@ -217,6 +218,20 @@ pub fn create_anime(anime_id: &u64, anime_name: &String, submitter_id: u64) -> R
     Ok(res)
 }
 
+pub fn create_claimed_anime(anime_id: u64, team_id: i64, user_id :u64) -> Result<usize> {
+    const CREATE_CLAIMED_ANIME: &str = "
+    INSERT INTO claimed_anime (anime_id, team_id, claimed_by, claimed_on)
+    VALUES (?1, ?2, ?3, ?4);
+    ";
+    let present_time: SystemTime = SystemTime::now();
+    let present_time: DateTime<Utc> = present_time.into();
+    let present_time: String = present_time.to_rfc3339();
+    let conn: Connection = Connection::open(TEAM_SWAPPING_PATH)?;
+    println!("{} {} {} {}", anime_id, team_id, user_id, present_time);
+    let res = conn.execute(CREATE_CLAIMED_ANIME, rusqlite::params![anime_id, team_id, user_id, present_time])?;
+    Ok(res)
+}
+
 pub fn delete_teams() -> Result<usize> {
     const DELETE_MEMBERS: &str = "
     DELETE FROM members;
@@ -281,6 +296,20 @@ pub fn check_if_anime_exists(anime_id: u64) -> Result<bool> {
     Ok(anime_exists.is_some())
 }
 
+pub fn check_if_anime_is_claimed(anime_name: &String) -> Result<bool> {
+    const CHECK_QUERY: &str = "
+        SELECT EXISTS(
+        SELECT 1 
+        FROM anime a
+        JOIN claimed_anime ca ON a.anime_id = ca.anime_id
+        WHERE a.name = ?1
+    )";
+    let conn = Connection::open(TEAM_SWAPPING_PATH)?;
+    let mut stmt = conn.prepare(CHECK_QUERY)?;
+    let is_claimed: bool = stmt.query_row([anime_name], |row| row.get(0))?;
+    Ok(is_claimed)
+}
+
 pub fn count_submitted_anime(user_id: u64) -> Result<u64> {
     const COUNT_QUERY: &str = "
     SELECT COUNT(*) AS anime_count FROM anime WHERE submitter = ?1; 
@@ -314,7 +343,20 @@ pub fn get_submitted_anime(user_id: u64) -> Result<Vec<String>> {
 
 pub fn get_all_anime() -> Result<Vec<types::SubmittedAnime>> {
     let GET_ANIME_QUERY: &str = "
-    SELECT * FROM anime;
+    SELECT 
+        a.anime_id,
+        a.name AS anime_name,
+        m.name AS submitter_name,
+        t.team_name AS claimed_team_name,
+        ca.claimed_on
+    FROM 
+        anime a
+    JOIN 
+        members m ON a.submitter = m.member_id
+    LEFT JOIN 
+        claimed_anime ca ON a.anime_id = ca.anime_id
+    LEFT JOIN 
+        teams t ON ca.team_id = t.team_id;
     ";
     let mut anime: Vec<types::SubmittedAnime> = Vec::new();
     let conn: Connection = Connection::open(TEAM_SWAPPING_PATH)?;
@@ -323,8 +365,10 @@ pub fn get_all_anime() -> Result<Vec<types::SubmittedAnime>> {
     |row| {
         Ok(types::SubmittedAnime {
             anime_id: row.get(0)?,
-            name: row.get(1)?,
-            submitter: row.get(2)?,
+            anime_name: row.get(1)?,
+            submitter_name: row.get(2)?,
+            claimed_by_team: row.get::<_, Option<String>>(3)?,
+            claimed_on: row.get::<_, Option<String>>(4)?,
         })
     })?;
     for a in anime_iter {
@@ -343,6 +387,53 @@ pub fn get_anime_submitter(anime_name: &String) -> Result<u64> {
     let conn: Connection = Connection::open(TEAM_SWAPPING_PATH)?;
     let res: u64 = conn.query_row(SUBMITTER_QUERY, rusqlite::params![anime_name], |row| row.get(0))?;
     Ok(res)
+}
+
+pub fn get_member_with_team(user_id :u64) -> Result<(types::Member, i64)> {
+    let MEMBER_QUERY: &str = "
+    SELECT * FROM members WHERE member_id = ?1;
+    ";
+    let conn: Connection = Connection::open(TEAM_SWAPPING_PATH)?;
+    let res: (types::Member, i64) = conn.query_row(MEMBER_QUERY, rusqlite::params![user_id], 
+    |row| {
+        Ok((types::Member {
+            member_id: row.get(0)?,
+            member_name: row.get(1)?,
+        },
+            row.get(2)?,
+        ))
+    })?;
+    Ok(res)
+}
+
+pub fn get_anime_id_by_name(anime_name: &String) -> Result<Option<u64>> {
+    let ID_QUERY: &str = "
+    SELECT anime_id FROM anime WHERE name = ?1;
+    ";
+    let conn: Connection = Connection::open(TEAM_SWAPPING_PATH)?;
+    let res = conn.query_row(ID_QUERY, rusqlite::params![anime_name], 
+    |row| row.get(0),
+    );
+    match res {
+        Ok(anime_id) => Ok(Some(anime_id)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(e),
+    }
+}
+
+pub fn get_unclaimed_anime_names() -> Result<Vec<String>> {
+    let UNCLAIMED_QUERY: &str = "
+    SELECT a.name
+    FROM anime a
+    LEFT JOIN claimed_anime ca ON a.anime_id = ca.anime_id
+    WHERE ca.anime_id IS NULL;
+    ";
+    let conn = Connection::open(TEAM_SWAPPING_PATH)?;
+    let mut stmt = conn.prepare(UNCLAIMED_QUERY)?;
+    let anime_names = stmt.query_map([], |row| row.get(0))?
+        .filter_map(Result::ok)
+        .collect::<Vec<String>>();
+    Ok (anime_names)
 }
 
 pub fn delete_anime(anime_name: &String) -> Result<usize> {
