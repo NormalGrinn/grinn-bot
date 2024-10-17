@@ -2,6 +2,7 @@ use std::{collections::HashMap, env, sync::{Arc, Mutex}, time::Duration};
 use database::start_db;
 use poise::serenity_prelude as serenity;
 use dotenvy::dotenv;
+use warp::Filter;
 
 mod graphql_queries;
 mod anime_guessing_game;
@@ -12,6 +13,7 @@ mod database;
 mod anime_guessing_helpers; 
 mod commands;
 mod team_swapping;
+mod api_routes;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
@@ -118,8 +120,8 @@ async fn main() {
         },
         ..Default::default()
     };
-
-    let framework = poise::Framework::builder()
+    let bot_task = tokio::spawn(async move {
+        let framework = poise::Framework::builder()
         .setup(move |ctx, _ready, framework| {
             Box::pin(async move {
                 println!("Logged in as {}", _ready.user.name);
@@ -142,4 +144,16 @@ async fn main() {
         .await;
 
     client.unwrap().start().await.unwrap()
+    });
+
+    let api_task = tokio::spawn(async {
+        let anime_route = api_routes::get_anime::get_anime();
+        let teams_route = api_routes::get_teams::get_teams();
+        let routes = anime_route.or(teams_route);
+        warp::serve(routes)
+            .run(([127, 0, 0, 1], 3030))
+            .await;
+    });
+
+    let _ = tokio::join!(bot_task, api_task);
 }

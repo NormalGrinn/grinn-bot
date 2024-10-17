@@ -21,6 +21,34 @@ pub struct Staff {
     pub(crate) name: String,
     pub(crate) role: String,
 }
+
+#[derive(Debug, Serialize, Clone)]
+pub struct SubmittedAnime {
+    pub(crate) anime_id: u64,
+    pub(crate) name: String,
+    pub(crate) submitter: u64,
+}
+
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Team {
+    pub(crate) team_id: i64,
+    pub(crate) team_image_url: Option<String>,
+    pub(crate) team_name: String,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct Member{
+    pub(crate) member_id: u64,
+    pub(crate) member_name: String,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct TeamMembers {
+    pub(crate) team: Team,
+    pub(crate) members: Vec<(Member)>,
+}
+
 /**
  * Enum for describing the various types a hint can take on
  * Season: the airing season

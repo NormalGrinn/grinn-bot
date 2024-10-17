@@ -2,7 +2,7 @@ use rusqlite::{Connection, OptionalExtension, Result};
 use ::serenity::model::connection;
 use crate::types;
 use strsim::jaro_winkler;
-use std::hash::{DefaultHasher, Hash, Hasher};
+use std::{collections::HashMap, hash::{DefaultHasher, Hash, Hasher}};
 use poise::serenity_prelude as serenity;
 
 const ANIME_GUESSING_PATH: &str = "databases/animeGuessing.db";
@@ -134,27 +134,43 @@ pub async fn set_anime_info(channel_id: u64, entry_info: types::AnimeGuess, gott
     Ok(res)
 }
 
-pub fn get_teams() -> Result<Vec<(String, String)>> {
+pub fn get_teams() -> Result<Vec<types::TeamMembers>> {
     const GET_TEAMS: &str = "
-    SELECT members.name, teams.team_name
+    SELECT members.member_id, members.name, teams.team_id, teams.team_name, teams.team_image_url
     FROM members
-    INNER JOIN teams ON members.team = teams.team_id; 
+    INNER JOIN teams ON members.team = teams.team_id;
     ";
-    let mut members: Vec<(String, String)> = Vec::new();
     let conn = Connection::open(TEAM_SWAPPING_PATH)?;
     let mut team_query = conn.prepare(GET_TEAMS)?;
     let team_iter = team_query.query_map([], |row| {
         Ok((
-            row.get::<_, String>(0)?,
-            row.get::<_, String>(1)?,
+            types::Team {
+                team_id: row.get(2)?,
+                team_image_url: row.get(4)?,
+                team_name: row.get(3)?,
+            },
+            types::Member {
+                member_id: row.get(0)?,
+                member_name: row.get(1)?,
+            },
         ))
     })?;
-    for member in team_iter {
-        let (name, team_name) = member?;
-        println!("Member: {}, Team: {}", name, team_name);
-        members.push((name, team_name))
+    let mut teams: HashMap<i64, (types::Team, Vec<types::Member>)> = HashMap::new();
+    for m in team_iter {
+        match m {
+            Ok((team, member)) => {
+                teams.entry(team.team_id).or_insert_with(|| {
+                    (team.clone(), Vec::new()) // Clone the team to insert into the HashMap
+                }).1.push(member);
+            },
+            Err(_) => (),
+        }
     }
-    Ok(members)
+    let team_members_list: Vec<types::TeamMembers> = teams
+    .into_iter()
+    .map(|(_, (team, members))| types::TeamMembers { team, members })
+    .collect();
+    Ok(team_members_list)
 }
 
 
@@ -294,6 +310,30 @@ pub fn get_submitted_anime(user_id: u64) -> Result<Vec<String>> {
         }
     }
     Ok(names)
+}
+
+pub fn get_all_anime() -> Result<Vec<types::SubmittedAnime>> {
+    let GET_ANIME_QUERY: &str = "
+    SELECT * FROM anime;
+    ";
+    let mut anime: Vec<types::SubmittedAnime> = Vec::new();
+    let conn: Connection = Connection::open(TEAM_SWAPPING_PATH)?;
+    let mut anime_query = conn.prepare(GET_ANIME_QUERY)?;
+    let anime_iter = anime_query.query_map((),
+    |row| {
+        Ok(types::SubmittedAnime {
+            anime_id: row.get(0)?,
+            name: row.get(1)?,
+            submitter: row.get(2)?,
+        })
+    })?;
+    for a in anime_iter {
+        match a {
+            Ok(valid_anime) => anime.push(valid_anime),
+            Err(_) => (),
+        }
+    }
+    Ok(anime)
 }
 
 pub fn get_anime_submitter(anime_name: &String) -> Result<u64> {
