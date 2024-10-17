@@ -343,7 +343,20 @@ pub fn get_submitted_anime(user_id: u64) -> Result<Vec<String>> {
 
 pub fn get_all_anime() -> Result<Vec<types::SubmittedAnime>> {
     let GET_ANIME_QUERY: &str = "
-    SELECT * FROM anime;
+    SELECT 
+        a.anime_id,
+        a.name AS anime_name,
+        m.name AS submitter_name,
+        t.team_name AS claimed_team_name,
+        ca.claimed_on
+    FROM 
+        anime a
+    JOIN 
+        members m ON a.submitter = m.member_id
+    LEFT JOIN 
+        claimed_anime ca ON a.anime_id = ca.anime_id
+    LEFT JOIN 
+        teams t ON ca.team_id = t.team_id;
     ";
     let mut anime: Vec<types::SubmittedAnime> = Vec::new();
     let conn: Connection = Connection::open(TEAM_SWAPPING_PATH)?;
@@ -352,8 +365,10 @@ pub fn get_all_anime() -> Result<Vec<types::SubmittedAnime>> {
     |row| {
         Ok(types::SubmittedAnime {
             anime_id: row.get(0)?,
-            name: row.get(1)?,
-            submitter: row.get(2)?,
+            anime_name: row.get(1)?,
+            submitter_name: row.get(2)?,
+            claimed_by_team: row.get::<_, Option<String>>(3)?,
+            claimed_on: row.get::<_, Option<String>>(4)?,
         })
     })?;
     for a in anime_iter {
