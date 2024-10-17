@@ -1,6 +1,8 @@
 use std::{collections::HashMap, env, sync::{Arc, Mutex}, time::Duration};
 use database::start_db;
 use poise::serenity_prelude as serenity;
+use dotenvy::dotenv;
+use warp::Filter;
 
 mod graphql_queries;
 mod anime_guessing_game;
@@ -10,6 +12,8 @@ mod group_scores;
 mod database;
 mod anime_guessing_helpers; 
 mod commands;
+mod team_swapping;
+mod api_routes;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
@@ -38,16 +42,35 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
 #[tokio::main]
 async fn main() {
     //env_logger::init();
-    start_db();
     // FrameworkOptions contains all of poise's configuration option in one struct
     // Every option can be omitted to use its default value
+    dotenv().ok();
+
+    match env::var("SWAPPER_ROLE_ID") {
+        Ok(id) => println!("Swapper role ID: {}", id),
+        Err(_) => println!("Swapper role ID not properly set"),
+    }
+    match env::var("HOST_ROLE_ID") {
+        Ok(id) => println!("Host role ID: {}", id),
+        Err(_) => println!("Host role ID not properly set"),
+    }
+    match env::var("GUILD_ID") {
+        Ok(id) => println!("Guild ID: {}", id),
+        Err(_) => println!("Guild ID not properly set"),
+    }
+
     let options = poise::FrameworkOptions {
         commands: vec![
-                    commands::help(), 
-                    commands::animeguess(),
-                    commands::hint(),
-                    commands::guess(),
-                    commands::giveup(), 
+                    commands::help::help(), 
+                    commands::anime_guessing::animeguess::animeguess(),
+                    commands::anime_guessing::hint::hint(),
+                    commands::anime_guessing::guess::guess(),
+                    commands::anime_guessing::giveup::giveup(), 
+                    commands::teamswap::create_team::create_team(),
+                    commands::teamswap::display_teams::display_teams(),
+                    commands::teamswap::delete_teams::delete_teams(),
+                    commands::teamswap::submit_anime::submit_anime(),
+                    commands::teamswap::remove_submission::remove_submission(),
                     ],
         prefix_options: poise::PrefixFrameworkOptions {
             prefix: Some("~".into()),
@@ -97,8 +120,8 @@ async fn main() {
         },
         ..Default::default()
     };
-
-    let framework = poise::Framework::builder()
+    let bot_task = tokio::spawn(async move {
+        let framework = poise::Framework::builder()
         .setup(move |ctx, _ready, framework| {
             Box::pin(async move {
                 println!("Logged in as {}", _ready.user.name);
@@ -121,4 +144,16 @@ async fn main() {
         .await;
 
     client.unwrap().start().await.unwrap()
+    });
+
+    let api_task = tokio::spawn(async {
+        let anime_route = api_routes::get_anime::get_anime();
+        let teams_route = api_routes::get_teams::get_teams();
+        let routes = anime_route.or(teams_route);
+        warp::serve(routes)
+            .run(([127, 0, 0, 1], 3030))
+            .await;
+    });
+
+    let _ = tokio::join!(bot_task, api_task);
 }

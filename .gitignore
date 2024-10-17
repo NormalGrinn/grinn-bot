@@ -1,3 +1,4 @@
 /target
 src/databases
 /databases
+/.env
