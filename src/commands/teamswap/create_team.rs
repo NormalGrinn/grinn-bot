@@ -40,16 +40,18 @@ pub async fn create_team(
             },
         }
         match database::check_if_user_in_team(m.id.get()) {
-            Ok(b) => {
-                if b {
-                    let message = format!("{} already is in another team therefore a team cannot be created", m.global_name.clone().unwrap());
-                    ctx.say(message).await?;
-                    return  Ok(())
+            Ok(team_id) => {
+                match team_id {
+                    Some(_) => {
+                        let message = format!("{} is already in a team and thus cannot be added", m.name);
+                        ctx.say(message).await?;
+                        return Ok(());
+                    },
+                    None => (),
                 }
             },
-            Err(e) => {
-                println!("{:?}", e);
-                ctx.say("An error has occured checking if already in team").await?;
+            Err(_) => {
+                ctx.say("An error has occured checking if the user is already in a team").await?;
                 return Ok(())
             },
         }

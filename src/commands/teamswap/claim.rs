@@ -47,10 +47,13 @@ pub async fn claim(
         },
     }
     match database::check_if_user_in_team(user_id) {
-        Ok(b) => {
-            if !b {
-                ctx.say("This user is not in a team and thus can't claim an anime").await?;
-                return Ok(())
+        Ok(team_id) => {
+            match team_id {
+                Some(_) => (),
+                None => {
+                    ctx.say("You are not in a team and thus cannot claim an anime").await?;
+                    return Ok(());
+                },
             }
         },
         Err(_) => {

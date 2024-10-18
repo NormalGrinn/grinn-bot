@@ -245,15 +245,19 @@ pub fn delete_teams() -> Result<usize> {
     Ok(res)
 }
 
-pub fn check_if_user_in_team(user_id :u64) -> Result<bool, rusqlite::Error> {
+pub fn check_if_user_in_team(user_id :u64) -> Result<Option<u64>> {
     const CHECK_QUERY: &str = "
-    SELECT team IS NULL FROM members WHERE member_id = ?1;
+    SELECT team FROM members WHERE member_id = ?1;
     ";
     let conn = Connection::open(TEAM_SWAPPING_PATH)?;
-    let in_team: Option<bool> = conn.query_row(CHECK_QUERY,
+    let res= conn.query_row(CHECK_QUERY,
         rusqlite::params![user_id],
-         |row| row.get(0)).optional()?;
-    Ok(!in_team.unwrap_or(false))
+         |row| row.get(0));
+    match res {
+    Ok(team_id) => Ok(Some(team_id)),
+    Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+    Err(e) => Err(e),
+}
 }
 
 pub fn check_if_team_exists(team_name: &String) -> Result<bool> {
