@@ -4,7 +4,7 @@ use strsim::jaro_winkler;
 use std::{collections::HashMap, hash::{DefaultHasher, Hash, Hasher}};
 use poise::serenity_prelude as serenity;
 use std::time::SystemTime;
-use chrono::{Date, DateTime, Utc};
+use chrono::{DateTime, Utc};
 
 const ANIME_GUESSING_PATH: &str = "databases/animeGuessing.db";
 const TEAM_SWAPPING_PATH: &str = "databases/teamSwaps.db";
@@ -156,7 +156,7 @@ pub fn get_teams() -> Result<Vec<types::TeamMembers>> {
             },
         ))
     })?;
-    let mut teams: HashMap<i64, (types::Team, Vec<types::Member>)> = HashMap::new();
+    let mut teams: HashMap<u64, (types::Team, Vec<types::Member>)> = HashMap::new();
     for m in team_iter {
         match m {
             Ok((team, member)) => {
@@ -188,7 +188,7 @@ pub fn create_team(members: Vec<serenity::User>, team_name: String) -> Result<us
     ";
     let mut hasher = DefaultHasher::new();
     team_name.hash(&mut hasher);
-    let team_id: i64 = hasher.finish() as i64;
+    let team_id: u64 = hasher.finish() as u64;
     let conn = Connection::open(TEAM_SWAPPING_PATH)?;
     let res = conn.execute(CREATE_TEAM, rusqlite::params![team_id, team_name])?;
     for member in members {
@@ -218,7 +218,7 @@ pub fn create_anime(anime_id: &u64, anime_name: &String, submitter_id: u64) -> R
     Ok(res)
 }
 
-pub fn create_claimed_anime(anime_id: u64, team_id: i64, user_id :u64) -> Result<usize> {
+pub fn create_claimed_anime(anime_id: u64, team_id: u64, user_id :u64) -> Result<usize> {
     const CREATE_CLAIMED_ANIME: &str = "
     INSERT INTO claimed_anime (anime_id, team_id, claimed_by, claimed_on)
     VALUES (?1, ?2, ?3, ?4);
@@ -245,18 +245,36 @@ pub fn delete_teams() -> Result<usize> {
     Ok(res)
 }
 
+pub fn delete_team_by_team_id(team_id: u64) -> Result<usize> {
+    const DELETE_TEAM_FOR_MEMBERS: &str = "
+    UPDATE MEMBERS
+    SET team = NULL
+    WHERE team = ?1;
+    ";
+    const DELETE_CLAIMS: &str = "
+    DELETE FROM claimed_anime WHERE team_id = ?1;
+    ";
+    const DELETE_TEAM: &str = "
+    DELETE FROM teams WHERE team_id = ?1;
+    ";
+    let conn = Connection::open(TEAM_SWAPPING_PATH)?;
+    conn.execute(DELETE_TEAM_FOR_MEMBERS, rusqlite::params![team_id])?;
+    conn.execute(DELETE_CLAIMS, rusqlite::params![team_id])?;
+    conn.execute(DELETE_TEAM, rusqlite::params![team_id])?;
+    Ok(0)
+}
+
 pub fn check_if_user_in_team(user_id :u64) -> Result<Option<u64>> {
     const CHECK_QUERY: &str = "
     SELECT team FROM members WHERE member_id = ?1;
     ";
     let conn = Connection::open(TEAM_SWAPPING_PATH)?;
-    let res= conn.query_row(CHECK_QUERY,
+    let res: Option<u64>= conn.query_row(CHECK_QUERY,
         rusqlite::params![user_id],
-         |row| row.get(0));
+         |row| row.get(0))?;
     match res {
-    Ok(team_id) => Ok(Some(team_id)),
-    Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-    Err(e) => Err(e),
+        Some(team_id) => Ok(Some(team_id)),
+        None => Ok(None),
 }
 }
 
@@ -279,7 +297,7 @@ pub fn check_if_user_exists(user_id: u64) -> Result<bool> {
     SELECT member_id FROM members WHERE member_id = ?1;
     ";
     let conn = Connection::open(TEAM_SWAPPING_PATH)?;
-    let user_exists: Option<i64> = conn.query_row(
+    let user_exists: Option<u64> = conn.query_row(
         CHECK_QUERY,
         rusqlite::params![user_id],
         |row| row.get(0),
@@ -292,7 +310,7 @@ pub fn check_if_anime_exists(anime_id: u64) -> Result<bool> {
     SELECT anime_id FROM anime WHERE anime_id = ?1;
     ";
     let conn = Connection::open(TEAM_SWAPPING_PATH)?;
-    let anime_exists: Option<i64> = conn.query_row(
+    let anime_exists: Option<u64> = conn.query_row(
         CHECK_QUERY,
         rusqlite::params![anime_id],
         |row| row.get(0),
@@ -393,12 +411,12 @@ pub fn get_anime_submitter(anime_name: &String) -> Result<u64> {
     Ok(res)
 }
 
-pub fn get_member_with_team(user_id :u64) -> Result<(types::Member, i64)> {
+pub fn get_member_with_team(user_id :u64) -> Result<(types::Member, u64)> {
     let MEMBER_QUERY: &str = "
     SELECT * FROM members WHERE member_id = ?1;
     ";
     let conn: Connection = Connection::open(TEAM_SWAPPING_PATH)?;
-    let res: (types::Member, i64) = conn.query_row(MEMBER_QUERY, rusqlite::params![user_id], 
+    let res: (types::Member, u64) = conn.query_row(MEMBER_QUERY, rusqlite::params![user_id], 
     |row| {
         Ok((types::Member {
             member_id: row.get(0)?,
