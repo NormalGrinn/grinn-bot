@@ -4,8 +4,10 @@ use rusqlite::Result;
 use crate::database;
 
 #[poise::command(prefix_command, track_edits, slash_command)]
-pub async fn delete_team(
+pub async fn edit_team_image(
     ctx: Context<'_>,
+    #[description = "The new image for your team"]
+    new_image: String,
 ) -> Result<(), Error> {
     let user_id = ctx.author().id.get();
     let team_id: u64;
@@ -24,14 +26,14 @@ pub async fn delete_team(
             return Ok(())
         },
     }
-    match database::delete_team_by_team_id(team_id) {
+    match database::update_team_image(team_id, new_image) {
         Ok(_) => {
-            ctx.say("Team has been deleted").await?;
-            return Ok(());
+            ctx.say("Updated team image").await?;
+            return Ok(())
         },
         Err(_) => {
-            ctx.say("Error deleting the team").await?;
-            return Ok(());
+            ctx.say("Error updating team image").await?;
+            return Ok(())
         },
-    }
+        }
 }

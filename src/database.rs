@@ -466,3 +466,25 @@ pub fn delete_anime(anime_name: &String) -> Result<usize> {
     let res = conn.execute(DELETE_QUERY, rusqlite::params![anime_name])?;
     Ok(res)
 }
+
+pub fn update_team_name(team_id: u64, new_name: String) -> Result<usize> {
+    let UPDATE_QUERY: &str = "
+    UPDATE teams
+    SET team_name = ?1
+    WHERE team_id = ?2;
+    ";
+    let conn: Connection = Connection::open(TEAM_SWAPPING_PATH)?;
+    let res = conn.execute(UPDATE_QUERY, rusqlite::params![new_name, team_id])?;
+    Ok(res)
+}
+
+pub fn update_team_image(team_id: u64, new_image: String) -> Result<usize> {
+    let UPDATE_QUERY: &str = "
+    UPDATE teams
+    SET team_image_url = ?1
+    WHERE team_id = ?2;
+    ";
+    let conn: Connection = Connection::open(TEAM_SWAPPING_PATH)?;
+    let res = conn.execute(UPDATE_QUERY, rusqlite::params![new_image, team_id])?;
+    Ok(res)
+}

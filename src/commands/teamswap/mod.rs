@@ -5,3 +5,5 @@ pub mod submit_anime;
 pub mod remove_submission;
 pub mod claim;
 pub mod delete_team;
+pub mod edit_team_name;
+pub mod edit_team_image;
