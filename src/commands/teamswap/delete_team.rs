@@ -1,4 +1,5 @@
 use crate::{Context, Error};
+use poise::CreateReply;
 use rusqlite::Result;
 
 use crate::database;
@@ -14,23 +15,23 @@ pub async fn delete_team(
             match id {
                 Some(id) => team_id = id,
                 None => {
-                    ctx.say("You are not in a team and thus cannot delete it").await?;
+                    ctx.send(CreateReply::default().content("You are not in a team and thus cannot delete it").ephemeral(true)).await?;
                     return Ok(());
                 },
             }
         },
         Err(_) => {
-            ctx.say("Error checking if you are in a team").await?;
+            ctx.send(CreateReply::default().content("Error checking if you are in a team").ephemeral(true)).await?;
             return Ok(())
         },
     }
     match database::delete_team_by_team_id(team_id) {
         Ok(_) => {
-            ctx.say("Team has been deleted").await?;
+            ctx.send(CreateReply::default().content("Team has been deleted").ephemeral(true)).await?;
             return Ok(());
         },
         Err(_) => {
-            ctx.say("Error deleting the team").await?;
+            ctx.send(CreateReply::default().content("Error deleting the team").ephemeral(true)).await?;
             return Ok(());
         },
     }

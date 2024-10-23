@@ -12,8 +12,8 @@ pub async fn check_swapper_role(user: &serenity::User, ctx: &Context<'_>) -> Res
 }
 
 pub async fn check_host_role(user: &serenity::User, ctx: &Context<'_>) -> Result<bool, Error> {
-    let guild_id = serenity::GuildId::new(env::var("HOST_ROLE_ID")?.parse()?);
-    let role_id = serenity::RoleId::new(env::var("SWAPPER_ROLE_ID")?.parse()?);
+    let guild_id = serenity::GuildId::new(env::var("GUILD_ID")?.parse()?);
+    let role_id = serenity::RoleId::new(env::var("HOST_ROLE_ID")?.parse()?);
     //let role_id = serenity::RoleId::new(role_id_env);
 
     let res = user.has_role(ctx.http(), guild_id, role_id).await;

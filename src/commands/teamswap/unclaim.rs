@@ -1,17 +1,18 @@
 use crate::{team_swapping::team_swap_utils, Context, Error};
 use poise::CreateReply;
 use rusqlite::Result;
-use serenity::futures::Stream;
-use serenity::futures;
+use serenity::futures::{self, Stream};
 use strsim::jaro_winkler;
+use std::time::SystemTime;
+use chrono::{DateTime, FixedOffset, Utc};
 
-use crate::{database, Data};
+use crate::database;
 
-async fn autocomplete_claim<'a>(
+async fn autocomplete_unclaim<'a>(
     ctx: Context<'_>,
     partial: &'a str,
 ) -> impl Stream<Item = String> + 'a {
-    let names = database::get_unclaimed_anime_names().unwrap();
+    let names = database::get_calimed_anime_by_user(ctx.author().id.get()).unwrap();
     let mut scored_names: Vec<(f64, String)> = names
     .iter()
     .map(|name| {
@@ -27,10 +28,10 @@ async fn autocomplete_claim<'a>(
 }
 
 #[poise::command(prefix_command, track_edits, slash_command)]
-pub async fn claim(
+pub async fn unclaim(
     ctx: Context<'_>,
-    #[description = "The name of the anime you want to claim"]
-    #[autocomplete = "autocomplete_claim"]
+    #[description = "The name of the anime you want to unclaim"]
+    #[autocomplete = "autocomplete_unclaim"]
     anime_name: String,
 ) -> Result<(), Error> {
     let user_id = ctx.author().id.get();
@@ -83,38 +84,46 @@ pub async fn claim(
             return Ok(());
         },
     }
-    match database::check_if_anime_is_claimed(&anime_name) {
-        Ok(b) => if b {
-            ctx.send(CreateReply::default().content("This anime has already been claimed, please pick another one").ephemeral(true)).await?;
-            return Ok(());
+    match database::get_team_and_time_claimed_anime(anime_id) {
+        Ok((t_id, time)) => {
+            if t_id != user_team_id {
+                ctx.send(CreateReply::default().content("You are trying to unclaim an anime not claimed by your team").ephemeral(true)).await?;
+                return Ok(())
+            }
+            let present_time: DateTime<Utc> = Utc::now();
+            let claimed_time_fixed_res= DateTime::parse_from_rfc3339(&time).map_err(|e| {
+                eprintln!("Erro parsing time: {}", e);
+            });
+            let claimed_time_fixed: DateTime<FixedOffset>;
+            match claimed_time_fixed_res {
+                Ok(t) => claimed_time_fixed = t,
+                Err(_) => {
+                    ctx.send(CreateReply::default().content("Error with parsing time").ephemeral(true)).await?;
+                    return Ok(())
+                },
+            }
+            let claimed_time_utc: DateTime<Utc> = claimed_time_fixed.with_timezone(&Utc);
+            let duration_since_claimed = present_time.signed_duration_since(claimed_time_utc);
+            if duration_since_claimed < chrono::Duration::hours(12) { 
+                match database::delete_claim(anime_id) {
+                    Ok(_) => {
+                        ctx.send(CreateReply::default().content("Successfully unclaimed anime").ephemeral(true)).await?;
+                        return Ok(());
+                    },
+                    Err(_) => {
+                        ctx.send(CreateReply::default().content("Error unclaming anime").ephemeral(true)).await?;
+                        return Ok(())
+                    },
+                }
+            } else {
+                ctx.send(CreateReply::default().content("It's been more than 12 hours, so this anime cannot be unclaimed").ephemeral(true)).await?;
+                return Ok(());
+            }
         },
         Err(_) => {
-            ctx.send(CreateReply::default().content("An error has occured checking if the anime has been claimed").ephemeral(true)).await?;
+            ctx.send(CreateReply::default().content("Error checking fetching the anime info").ephemeral(true)).await?;
             return Ok(())
         },
     }
-    match database::get_teammembers_id_by_team_id(user_team_id) {
-    Ok(ids) => {
-        if ids.contains(&member_id) {
-            ctx.send(CreateReply::default().content("Someone on your team submitted this anime, thus you cannot claim it").ephemeral(true)).await?;
-            return Ok(())
-        }
-    },
-    Err(_) => {
-        ctx.send(CreateReply::default().content("An error has occured checking team members").ephemeral(true)).await?;
-        return Ok(())
-    },
-    }
-    let (_, team_id) = database::get_member_with_team(user_id)?;
-    match database::create_claimed_anime(anime_id, team_id, user_id) {
-        Ok(_) => {
-            let message = format!("You claimed {}", anime_name);
-            ctx.send(CreateReply::default().content(message).ephemeral(true)).await?;
-            return Ok(());
-        },
-        Err(_) => {
-            ctx.send(CreateReply::default().content("Error claiming anime").ephemeral(true)).await?;
-            return Ok(());
-        },
-    }
+    todo!()
 }

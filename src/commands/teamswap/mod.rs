@@ -1,5 +1,4 @@
 pub mod create_team;
-pub mod delete_teams;
 pub mod display_teams;
 pub mod submit_anime;
 pub mod remove_submission;
@@ -7,3 +6,5 @@ pub mod claim;
 pub mod delete_team;
 pub mod edit_team_name;
 pub mod edit_team_image;
+pub mod status;
+pub mod unclaim;
