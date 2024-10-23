@@ -67,7 +67,6 @@ async fn main() {
                     commands::anime_guessing::guess::guess(),
                     commands::anime_guessing::giveup::giveup(), 
                     commands::teamswap::create_team::create_team(),
-                    commands::teamswap::display_teams::display_teams(),
                     commands::teamswap::submit_anime::submit_anime(),
                     commands::teamswap::remove_submission::remove_submission(),
                     commands::teamswap::claim::claim(),
