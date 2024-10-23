@@ -24,7 +24,7 @@ pub struct Staff {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Team {
-    pub(crate) team_id: i64,
+    pub(crate) team_id: u64,
     pub(crate) team_image_url: Option<String>,
     pub(crate) team_name: String,
 }

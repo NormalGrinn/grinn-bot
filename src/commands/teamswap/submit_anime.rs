@@ -1,4 +1,5 @@
 use crate::{team_swapping::team_swap_utils, Context, Error};
+use poise::CreateReply;
 use rusqlite::Result;
 use regex::Regex;
 
@@ -15,26 +16,26 @@ pub async fn submit_anime(
         Ok(b) => {
             if !b {
                 let message = format!("{} does not have the swapper role, and therefore a team cannot be created", user.name);
-                ctx.say(message).await?;
+                ctx.send(CreateReply::default().content(message).ephemeral(true)).await?;
                 return  Ok(())
             }
         },
         Err(_) => {
-            ctx.say("An error has occured").await?;
+            ctx.send(CreateReply::default().content("An error has occured").ephemeral(true)).await?;
             return Ok(())
         },
     }
     match database::check_if_user_exists(user.id.get()) {
         Ok(b) => { if !b { database::create_member(ctx.author().clone())?; } },
         Err(_) => {
-            ctx.say("Error chekcing if users exists").await?;
+            ctx.send(CreateReply::default().content("Error chekcing if users exists").ephemeral(true)).await?;
             return Ok(());
         },
     }
     match database::count_submitted_anime(user.id.get()) {
         Ok(count) => {
-            if count > 7 {
-                ctx.say("You have already submitted 7 anime, if you want to submit a different anime you should remove a submission").await?;
+            if count >= 7 {
+                ctx.send(CreateReply::default().content("You have already submitted 7 anime, if you want to submit a different anime you should remove a submission").ephemeral(true)).await?;
                 return Ok(());
             }
         },
@@ -50,22 +51,23 @@ pub async fn submit_anime(
         match database::check_if_anime_exists(*anime_id) {
             Ok(b) => {
                 if !b {
-                    database::create_anime(anime_id, &anime_title.to_string(), user.id.get())?;
-                    ctx.say("Anime was submitted successfully").await?;
+                    let cleaned_title = anime_title.replace("-", " ");
+                    database::create_anime(anime_id, &cleaned_title, user.id.get())?;
+                    ctx.send(CreateReply::default().content("Anime was submitted successfully").ephemeral(true)).await?;
                     return Ok(());
                 } else {
-                    ctx.say("Anime has already been submitted").await?;
+                    ctx.send(CreateReply::default().content("Anime has already been submitted").ephemeral(true)).await?;
                     return Ok(());
                 }
 
             },
             Err(_) => {
-                ctx.say("An error has occured checking if the anime exists").await?;
+                ctx.send(CreateReply::default().content("An error has occured checking if the anime exists").ephemeral(true)).await?;
                 return Ok(());
             },
         }
     } else {
-        ctx.say("You did not provide a valid AL link").await?;
+        ctx.send(CreateReply::default().content("You did not provide a valid AL link").ephemeral(true)).await?;
         return Ok(());
     }
 }

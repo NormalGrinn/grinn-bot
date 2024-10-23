@@ -1,6 +1,6 @@
 use crate::{team_swapping::team_swap_utils, Context, Error};
 use rusqlite::Result;
-use poise::serenity_prelude as serenity;
+use poise::{serenity_prelude as serenity, CreateReply};
 
 use crate::database;
 
@@ -30,26 +30,12 @@ pub async fn create_team(
             Ok(b) => {
                 if !b {
                     let message = format!("{} does not have the swapper role, and therefore a team cannot be created", m.global_name.clone().unwrap());
-                    ctx.say(message).await?;
+                    ctx.send(CreateReply::default().content(message).ephemeral(true)).await?;
                     return  Ok(())
                 }
             },
             Err(_) => {
-                ctx.say("An error has occured checking roles").await?;
-                return Ok(())
-            },
-        }
-        match database::check_if_user_in_team(m.id.get()) {
-            Ok(b) => {
-                if b {
-                    let message = format!("{} already is in another team therefore a team cannot be created", m.global_name.clone().unwrap());
-                    ctx.say(message).await?;
-                    return  Ok(())
-                }
-            },
-            Err(e) => {
-                println!("{:?}", e);
-                ctx.say("An error has occured checking if already in team").await?;
+                ctx.send(CreateReply::default().content("An error has occured checking roles").ephemeral(true)).await?;
                 return Ok(())
             },
         }
@@ -57,35 +43,56 @@ pub async fn create_team(
             Ok(b) => {
                 if !b {
                     let message = format!("{} has not joined yet", m.global_name.clone().unwrap());
-                    ctx.say(message).await?;
+                    ctx.send(CreateReply::default().content(message).ephemeral(true)).await?;
                     return  Ok(())
                 }
             },
             Err(e) => {
                 println!("{:?}", e);
-                ctx.say("An error has occured checking if users exists").await?;
+                ctx.send(CreateReply::default().content("An error has occured checking if users exists").ephemeral(true)).await?;
+                return Ok(())
+            },
+        }
+        match database::check_if_user_in_team(m.id.get()) {
+            Ok(team_id) => {
+                match team_id {
+                    Some(_) => {
+                        let message = format!("{} is already in a team and thus cannot be added", m.name);
+                        ctx.send(CreateReply::default().content(message).ephemeral(true)).await?;
+                        return Ok(());
+                    },
+                    None => (),
+                }
+            },
+            Err(_) => {
+                ctx.send(CreateReply::default().content("An error has occured checking if the user is already in a team").ephemeral(true)).await?;
                 return Ok(())
             },
         }
     }
     match team_swap_utils::check_if_team_exists(&team_name) {
         Ok(b) => if b {
-            ctx.say("A team with this name already exists, please pick another one").await?;
+            ctx.send(CreateReply::default().content("A team with this name already exists, please pick another one").ephemeral(true)).await?;
             return Ok(());
         },
         Err(_) =>  {
-            ctx.say("An error has occured checking teams").await?;
+            ctx.send(CreateReply::default().content("An error has occured checking teams").ephemeral(true)).await?;
             return Ok(())
         },
     }
-    let res = database::create_team(members, team_name);
+    let res = database::create_team(&members, &team_name);
     match res {
         Ok(_) => {
-            ctx.say("Team has been created succesfully").await?;
+            let mut users: String = String::new();
+            for user in members {
+                users.push_str(&format!("<@{}> ", user.id.get()));
+            }
+            let message = format!("Team {} has been created with the members: {}", &team_name, users);
+            ctx.say(message).await?;
             return Ok(())
         },
         Err(_) => {
-            ctx.say("An error occured").await?;
+            ctx.send(CreateReply::default().content("An error occured creating the team").ephemeral(true)).await?;
             return Ok(())
         },
     }
