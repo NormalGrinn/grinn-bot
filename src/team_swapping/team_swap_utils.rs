@@ -28,3 +28,8 @@ pub fn check_if_team_exists(team_name: &String) -> Result<bool, Error> {
         Err(_) => return Err("An error has occured fetching from the database".into()),
     }
 }
+
+pub fn check_phase(allowed_phases: Vec<u64>) -> Result<bool, Error> {
+    let current_phase: u64 = env::var("PHASE")?.parse()?;
+    return Ok(allowed_phases.contains(&current_phase))
+}

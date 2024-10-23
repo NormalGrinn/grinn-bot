@@ -16,6 +16,18 @@ pub async fn create_team(
     #[description = "The third team member"] 
     member3: Option<serenity::User>,
 ) -> Result<(), Error> {
+    match team_swap_utils::check_phase(vec![2]) {
+        Ok(b) => {
+            if !b {
+                ctx.send(CreateReply::default().content("Command is not allowed in current phase").ephemeral(true)).await?;
+                return Ok(());
+            }
+        },
+        Err(_) => {
+            ctx.send(CreateReply::default().content("Error checking phases").ephemeral(true)).await?;
+            return Ok(())
+        },
+    }
     let mut members = vec![member1];
     match member2 {
         Some(x) => members.push(x),

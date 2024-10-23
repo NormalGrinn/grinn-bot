@@ -58,6 +58,10 @@ async fn main() {
         Ok(id) => println!("Guild ID: {}", id),
         Err(_) => println!("Guild ID not properly set"),
     }
+    match env::var("PHASE") {
+        Ok(id) => println!("PHASE: {}", id),
+        Err(_) => println!("Guild ID not properly set"),
+    }
 
     let options = poise::FrameworkOptions {
         commands: vec![
