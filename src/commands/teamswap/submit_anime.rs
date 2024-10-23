@@ -34,7 +34,7 @@ pub async fn submit_anime(
     }
     match database::count_submitted_anime(user.id.get()) {
         Ok(count) => {
-            if count > 7 {
+            if count >= 7 {
                 ctx.send(CreateReply::default().content("You have already submitted 7 anime, if you want to submit a different anime you should remove a submission").ephemeral(true)).await?;
                 return Ok(());
             }
