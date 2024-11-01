@@ -79,6 +79,7 @@ async fn main() {
                     commands::teamswap::edit_team_image::edit_team_image(),
                     commands::teamswap::status::status(),
                     commands::teamswap::unclaim::unclaim(),
+                    commands::teamswap::set_phase::set_phase(),
                     ],
         prefix_options: poise::PrefixFrameworkOptions {
             prefix: Some("~".into()),
@@ -142,8 +143,8 @@ async fn main() {
         .options(options)
         .build();
 
-    let token = env::var("DISCORD_TOKEN")
-        .expect("Missing `DISCORD_TOKEN` env var, see README for more information.");
+    let token = env::var("TOKEN")
+        .expect("Missing `TOKEN` env var, see README for more information.");
     let intents =
         serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT;
 
