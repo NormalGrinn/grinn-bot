@@ -1,4 +1,4 @@
-use crate::{Context, Error};
+use crate::{team_swapping::team_swap_utils, Context, Error};
 use poise::CreateReply;
 use regex::Regex;
 use rusqlite::Result;
@@ -11,6 +11,18 @@ pub async fn edit_team_image(
     #[description = "An imgur link to the image for your team"]
     new_image: String,
 ) -> Result<(), Error> {
+    match team_swap_utils::check_phase(vec![2,3]) {
+        Ok(b) => {
+            if !b {
+                ctx.send(CreateReply::default().content("Command is not allowed in current phase").ephemeral(true)).await?;
+                return Ok(());
+            }
+        },
+        Err(_) => {
+            ctx.send(CreateReply::default().content("Error checking phases").ephemeral(true)).await?;
+            return Ok(())
+        },
+    }
     let user_id = ctx.author().id.get();
     let team_id: u64;
     match  database::check_if_user_in_team(user_id) {
@@ -18,7 +30,7 @@ pub async fn edit_team_image(
             match id {
                 Some(id) => team_id = id,
                 None => {
-                    ctx.send(CreateReply::default().content("You are not in a team and thus cannot delete it").ephemeral(true)).await?;
+                    ctx.send(CreateReply::default().content("You are not in a team and thus cannot edit it").ephemeral(true)).await?;
                     return Ok(());
                 },
             }

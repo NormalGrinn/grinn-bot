@@ -1,4 +1,5 @@
 use crate::{team_swapping::team_swap_utils, Context, Error};
+use poise::CreateReply;
 use rusqlite::Result;
 use serenity::futures::Stream;
 use serenity::futures;
@@ -28,41 +29,53 @@ async fn autocomplete_removal<'a>(
 #[poise::command(prefix_command, track_edits, slash_command)]
 pub async fn remove_submission(
     ctx: Context<'_>,
-    #[description = "The anime you want to submit, this should be an AL URL to the anime"]
+    #[description = "Remove one of the anime you submitted"]
     #[autocomplete = "autocomplete_removal"]
     anime_name: String,
 ) -> Result<(), Error> {
+    match team_swap_utils::check_phase(vec![1,2]) {
+        Ok(b) => {
+            if !b {
+                ctx.send(CreateReply::default().content("Command is not allowed in current phase").ephemeral(true)).await?;
+                return Ok(());
+            }
+        },
+        Err(_) => {
+            ctx.send(CreateReply::default().content("Error checking phases").ephemeral(true)).await?;
+            return Ok(())
+        },
+    }
     let user_id = ctx.author().id.get();
     match team_swap_utils::check_swapper_role(&ctx.author(), &ctx).await {
         Ok(b) => {
             if !b {
                 let message = format!("{} does not have the swapper role, and therefore cannot remove submissions", ctx.author().global_name.clone().unwrap());
-                ctx.say(message).await?;
+                ctx.send(poise::CreateReply::default().content(message).ephemeral(true)).await?;
                 return  Ok(())
             }
         },
         Err(_) => {
-            ctx.say("An error has occured checking roles").await?;
+            ctx.send(poise::CreateReply::default().content("An error has occured checking roles").ephemeral(true)).await?;
             return Ok(())
         },
     }
     match database::get_anime_submitter(&anime_name) {
         Ok(submitter_id) => if submitter_id != user_id {
-            ctx.say("You are trying to remove an anime you did not submit").await?;
+            ctx.send(poise::CreateReply::default().content("You are trying to remove an anime you did not submit").ephemeral(true)).await?;
             return Ok(())
         },
         Err(_) => {
-            ctx.say("Error trying to find the anime submitter").await?;
+            ctx.send(poise::CreateReply::default().content("Error trying to find the anime submitter").ephemeral(true)).await?;
             return Ok(())
         },
     }
     match database::delete_anime(&anime_name) {
     Ok(_) => {
-        ctx.say("Anime removed successfully").await?;
+        ctx.send(poise::CreateReply::default().content("Anime removed successfully").ephemeral(true)).await?;
         return Ok(());
     },
     Err(_) => {
-        ctx.say("Error trying to remove anime").await?;
+        ctx.send(poise::CreateReply::default().content("Error trying to remove anime").ephemeral(true)).await?;
         return Ok(());
     },
     }

@@ -34,6 +34,18 @@ pub async fn unclaim(
     #[autocomplete = "autocomplete_unclaim"]
     anime_name: String,
 ) -> Result<(), Error> {
+    match team_swap_utils::check_phase(vec![3]) {
+        Ok(b) => {
+            if !b {
+                ctx.send(CreateReply::default().content("Command is not allowed in current phase").ephemeral(true)).await?;
+                return Ok(());
+            }
+        },
+        Err(_) => {
+            ctx.send(CreateReply::default().content("Error checking phases").ephemeral(true)).await?;
+            return Ok(())
+        },
+    }
     let user_id = ctx.author().id.get();
     match team_swap_utils::check_swapper_role(&ctx.author(), &ctx).await {
         Ok(b) => {

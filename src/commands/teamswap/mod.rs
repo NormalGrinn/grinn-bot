@@ -7,3 +7,5 @@ pub mod edit_team_name;
 pub mod edit_team_image;
 pub mod status;
 pub mod unclaim;
+pub mod set_phase;
+pub mod leave;

@@ -566,6 +566,19 @@ pub fn delete_claim(anime_id: u64) -> Result<usize> {
     Ok(res)
 }
 
+pub fn delete_user(user_id: &u64) -> Result<usize> {
+    let anime_deletion: &str = "
+    DELETE FROM anime WHERE submitter = ?1;
+    ";
+    let user_deletion: &str = "
+    DELETE FROM members WHERE member_id = ?1;
+    ";
+    let conn: Connection = Connection::open(TEAM_SWAPPING_PATH)?;
+    conn.execute(anime_deletion, rusqlite::params![user_id])?;
+    let res = conn.execute(user_deletion, rusqlite::params![user_id]);
+    res
+}
+
 pub fn update_team_name(team_id: u64, new_name: String) -> Result<usize> {
     let UPDATE_QUERY: &str = "
     UPDATE teams

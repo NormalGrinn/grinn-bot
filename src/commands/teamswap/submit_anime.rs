@@ -11,6 +11,18 @@ pub async fn submit_anime(
     #[description = "The anime you want to submit, this should be an AL URL to the anime"] 
     link: String,
 ) -> Result<(), Error> {
+    match team_swap_utils::check_phase(vec![1,2]) {
+        Ok(b) => {
+            if !b {
+                ctx.send(CreateReply::default().content("Command is not allowed in current phase").ephemeral(true)).await?;
+                return Ok(());
+            }
+        },
+        Err(_) => {
+            ctx.send(CreateReply::default().content("Error checking phases").ephemeral(true)).await?;
+            return Ok(())
+        },
+    }
     let user = ctx.author();
     match team_swap_utils::check_swapper_role(&user, &ctx).await {
         Ok(b) => {
@@ -34,13 +46,13 @@ pub async fn submit_anime(
     }
     match database::count_submitted_anime(user.id.get()) {
         Ok(count) => {
-            if count >= 7 {
-                ctx.send(CreateReply::default().content("You have already submitted 7 anime, if you want to submit a different anime you should remove a submission").ephemeral(true)).await?;
+            if count >= 12 {
+                ctx.send(CreateReply::default().content("You have already submitted 12 anime, if you want to submit a different anime you should remove a submission").ephemeral(true)).await?;
                 return Ok(());
             }
         },
         Err(_) => {
-            ctx.say("Error counting the submitted anime").await?;
+            ctx.send(CreateReply::default().content("Error counting the submitted anime").ephemeral(true)).await?;
             return Ok(())
         }
     }

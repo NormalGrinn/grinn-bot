@@ -58,6 +58,10 @@ async fn main() {
         Ok(id) => println!("Guild ID: {}", id),
         Err(_) => println!("Guild ID not properly set"),
     }
+    match env::var("PHASE") {
+        Ok(id) => println!("PHASE: {}", id),
+        Err(_) => println!("Guild ID not properly set"),
+    }
 
     let options = poise::FrameworkOptions {
         commands: vec![
@@ -75,6 +79,8 @@ async fn main() {
                     commands::teamswap::edit_team_image::edit_team_image(),
                     commands::teamswap::status::status(),
                     commands::teamswap::unclaim::unclaim(),
+                    commands::teamswap::set_phase::set_phase(),
+                    commands::teamswap::leave::leave(),
                     ],
         prefix_options: poise::PrefixFrameworkOptions {
             prefix: Some("~".into()),
@@ -138,8 +144,8 @@ async fn main() {
         .options(options)
         .build();
 
-    let token = env::var("DISCORD_TOKEN")
-        .expect("Missing `DISCORD_TOKEN` env var, see README for more information.");
+    let token = env::var("TOKEN")
+        .expect("Missing `TOKEN` env var, see README for more information.");
     let intents =
         serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT;
 
