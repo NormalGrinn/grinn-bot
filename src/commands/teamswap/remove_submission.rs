@@ -29,7 +29,7 @@ async fn autocomplete_removal<'a>(
 #[poise::command(prefix_command, track_edits, slash_command)]
 pub async fn remove_submission(
     ctx: Context<'_>,
-    #[description = "The anime you want to submit, this should be an AL URL to the anime"]
+    #[description = "Remove one of the anime you submitted"]
     #[autocomplete = "autocomplete_removal"]
     anime_name: String,
 ) -> Result<(), Error> {

@@ -80,6 +80,7 @@ async fn main() {
                     commands::teamswap::status::status(),
                     commands::teamswap::unclaim::unclaim(),
                     commands::teamswap::set_phase::set_phase(),
+                    commands::teamswap::leave::leave(),
                     ],
         prefix_options: poise::PrefixFrameworkOptions {
             prefix: Some("~".into()),

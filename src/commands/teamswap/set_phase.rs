@@ -9,7 +9,7 @@ use crate::database;
 #[poise::command(prefix_command, track_edits, slash_command)]
 pub async fn set_phase(
     ctx: Context<'_>,
-    #[description = "The new name of your team"] 
+    #[description = "Set the current phase"] 
     phase: u64,
 ) -> Result<(), Error> {
     match team_swap_utils::check_host_role(&ctx.author(), &ctx).await {

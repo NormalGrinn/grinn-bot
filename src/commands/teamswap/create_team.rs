@@ -7,10 +7,10 @@ use crate::database;
 #[poise::command(prefix_command, track_edits, slash_command)]
 pub async fn create_team(
     ctx: Context<'_>,
-    #[description = "The first team member, this should be you"] 
-    member1: serenity::User,
     #[description = "The name of your team"] 
     team_name: String,
+    #[description = "The first team member, this should be you"] 
+    member1: serenity::User,
     #[description = "The second team member"] 
     member2: Option<serenity::User>,
     #[description = "The third team member"] 
