@@ -27,7 +27,7 @@ pub async fn submit_anime(
     match team_swap_utils::check_swapper_role(&user, &ctx).await {
         Ok(b) => {
             if !b {
-                let message = format!("{} does not have the swapper role, and therefore a team cannot be created", user.name);
+                let message = format!("{} does not have the swapper role, and therefore you cannot submit an anime", user.name);
                 ctx.send(CreateReply::default().content(message).ephemeral(true)).await?;
                 return  Ok(())
             }

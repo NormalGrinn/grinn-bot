@@ -12,7 +12,7 @@ async fn autocomplete_unclaim<'a>(
     ctx: Context<'_>,
     partial: &'a str,
 ) -> impl Stream<Item = String> + 'a {
-    let names = database::get_calimed_anime_by_user(ctx.author().id.get()).unwrap();
+    let names = database::get_claimed_anime_by_user(ctx.author().id.get()).unwrap();
     let mut scored_names: Vec<(f64, String)> = names
     .iter()
     .map(|name| {

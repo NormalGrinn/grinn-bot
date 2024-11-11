@@ -446,7 +446,7 @@ pub fn get_unclaimed_anime_names() -> Result<Vec<String>> {
     Ok(anime_names)
 }
 
-pub fn get_calimed_anime_by_user(user_id: u64) -> Result<Vec<String>> {
+pub fn get_claimed_anime_by_user(user_id: u64) -> Result<Vec<String>> {
     let NAMES_QUERY: &str = "
     SELECT anime.name
     FROM claimed_anime

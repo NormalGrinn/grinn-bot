@@ -81,6 +81,7 @@ async fn main() {
                     commands::teamswap::unclaim::unclaim(),
                     commands::teamswap::set_phase::set_phase(),
                     commands::teamswap::leave::leave(),
+                    commands::teamswap::set_max_claims::set_max_claims(),
                     ],
         prefix_options: poise::PrefixFrameworkOptions {
             prefix: Some("~".into()),

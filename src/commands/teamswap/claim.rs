@@ -1,3 +1,5 @@
+use std::env;
+
 use crate::{team_swapping::team_swap_utils, Context, Error};
 use poise::CreateReply;
 use rusqlite::Result;
@@ -49,7 +51,7 @@ pub async fn claim(
     match team_swap_utils::check_swapper_role(&ctx.author(), &ctx).await {
         Ok(b) => {
             if !b {
-                let message = format!("{} does not have the swapper role, and therefore cannot remove submissions", ctx.author().global_name.clone().unwrap());
+                let message = format!("{} does not have the swapper role, and therefore cannot claim an anime", ctx.author().global_name.clone().unwrap());
                 ctx.send(CreateReply::default().content(message).ephemeral(true)).await?;
                 return  Ok(())
             }
@@ -117,6 +119,21 @@ pub async fn claim(
         return Ok(())
     },
     }
+
+    match database::get_claimed_anime_by_user(user_id) {
+        Ok(n) => {
+            let max_claims: u64 = env::var("ALLOWED_CLAIMS")?.parse()?;
+            if n.len() >= max_claims.try_into().unwrap() {
+                ctx.send(CreateReply::default().content("You currently can't claim any more anime, wait until the maximun is raised").ephemeral(true)).await?;
+                return Ok(())
+            }
+        },
+        Err(_) => {
+            ctx.send(CreateReply::default().content("An error has occured checking the claimed anime").ephemeral(true)).await?;
+            return Ok(())
+        },
+    }
+
     let (_, team_id) = database::get_member_with_team(user_id)?;
     match database::create_claimed_anime(anime_id, team_id, user_id) {
         Ok(_) => {
