@@ -9,3 +9,4 @@ pub mod status;
 pub mod unclaim;
 pub mod set_phase;
 pub mod leave;
+pub mod set_max_claims;

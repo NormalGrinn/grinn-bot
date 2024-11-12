@@ -28,6 +28,10 @@ pub async fn create_team(
             return Ok(())
         },
     }
+    if member1.id.get() != ctx.author().id.get() {
+        ctx.send(CreateReply::default().content("You should be the first member of your team").ephemeral(true)).await?;
+        return Ok(())
+    }
     let mut members = vec![member1];
     match member2 {
         Some(x) => members.push(x),
@@ -78,6 +82,18 @@ pub async fn create_team(
             },
             Err(_) => {
                 ctx.send(CreateReply::default().content("An error has occured checking if the user is already in a team").ephemeral(true)).await?;
+                return Ok(())
+            },
+        }
+        match database::get_submitted_anime(m.id.get()) {
+            Ok(n) => {
+                if n.len() < 7 {
+                    ctx.send(CreateReply::default().content("You should have at least submitted 7 anime before joining a team").ephemeral(true)).await?;
+                    return Ok(())
+                }
+            },
+            Err(_) => {
+                ctx.send(CreateReply::default().content("Error checking submitted anime").ephemeral(true)).await?;
                 return Ok(())
             },
         }
