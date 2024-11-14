@@ -2,11 +2,11 @@ use crate::{team_swapping::team_swap_utils, types, Context, Error};
 use poise::CreateReply;
 use rusqlite::Result;
 use serenity::all::{CreateAttachment, CreateMessage};
-use warp::filters::fs::file;
-use std::io::Write;
-use tokio::fs::File;
+use tokio::fs::OpenOptions;
+use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
+const PATH: &str = "status.txt";
 
 use crate::database;
 
@@ -53,8 +53,13 @@ pub async fn status(
     }
     counted_submissions.sort_by_key(|k| k.2);
     teams.sort_by_key(|k| k.members.len());
-    let file_path = "/tmp/status.txt";
-    let mut file = File::create(file_path).await?;
+
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(PATH)
+        .await?;
     let mut buffer = String::new();
 
     buffer.push_str("Users who are not yet in a team:\n");
@@ -67,14 +72,14 @@ pub async fn status(
     }
     buffer.push_str("\nNumber of submissions per member:\n");
     for (_, name, count) in counted_submissions {
-        buffer.push_str(&format!("{} has submitted {} anime\n", name, count));
+        buffer.push_str(&format!("{} has submitted ({}/12) anime\n", name, count));
     }
 
-    file.write_all(buffer.as_bytes()).await?;
+    fs::write(PATH, buffer.as_bytes()).await?;
     file.flush().await?;
 
-    // let attachment = CreateAttachment::file(&file, "status.txt").await?;
-    let builder = CreateMessage::new().content(buffer);
+    let attachment = CreateAttachment::path(PATH).await?;
+    let builder = CreateMessage::new().add_file(attachment);
 
     match ctx.author().direct_message(ctx.http(), builder).await {
         Ok(_) => {
@@ -85,7 +90,7 @@ pub async fn status(
         },
     };
 
-    let _ = tokio::fs::remove_file(file_path).await; // Ignore error if the file doesn't exist
+    let _ = tokio::fs::remove_file(PATH).await; // Ignore error if the file doesn't exist
 
     Ok(())
 }
