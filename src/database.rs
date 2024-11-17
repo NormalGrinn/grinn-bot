@@ -505,6 +505,31 @@ pub fn get_lonely_users() -> Result<Vec<(u64, String)>> {
     Ok(users)
 }
 
+pub fn get_lonely_eligible_users() -> Result<Vec<String>> {
+    const TEAMLESS_QUERY: &str = "
+    SELECT 
+        m.name
+    FROM 
+        members m
+    LEFT JOIN 
+        anime a 
+    ON 
+        m.member_id = a.submitter
+    WHERE 
+        m.team IS NULL
+    GROUP BY 
+        m.member_id, m.name
+    HAVING 
+        COUNT(a.anime_id) >= 7;
+    ";
+    let conn: Connection =  Connection::open(TEAM_SWAPPING_PATH)?;
+    let mut stmt = conn.prepare(TEAMLESS_QUERY)?;
+    let users = stmt.query_map((), |row| row.get(0))?
+    .filter_map(Result::ok)
+    .collect::<Vec<String>>();
+    Ok(users)
+}
+
 pub fn get_team_and_time_claimed_anime(anime_id: u64) -> Result<(u64, String)> {
     const TEAM_TIME_QUERY: &str = "
     SELECT team_id, claimed_on
