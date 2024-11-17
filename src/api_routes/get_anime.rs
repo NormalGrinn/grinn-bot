@@ -8,7 +8,8 @@ pub fn get_anime() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::R
         .and_then(move || {
             async {
                 match database::get_all_anime() {
-                    Ok(anime) => {
+                    Ok(mut anime) => {
+                        anime.sort_by(|a1, a2| a1.anime_name.cmp(&a2.anime_name));
                         let json_reply = json!(anime);
                         Ok(warp::reply::json(&json_reply))
                     },
