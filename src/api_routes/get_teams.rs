@@ -2,10 +2,12 @@ use serde::Serialize;
 use warp::Filter;
 use serde_json::json;
 
-use crate::database;
+use crate::{database, types};
+
 
 #[derive(Debug, Serialize, Clone)]
-struct Users {
+struct Data {
+    teams: Vec<types::TeamMembers>,
     teamless_users: Vec<String>,
 }
 
@@ -17,11 +19,11 @@ pub fn get_teams() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::R
                     Ok(teams) => {
                         match database::get_lonely_eligible_users() {
                             Ok(users) => {
-                                let wrapped_users = Users {
+                                let resp = Data {
+                                    teams: teams,
                                     teamless_users: users,
                                 };
-                                let response = (teams, wrapped_users);
-                                let json_reply = json!(response);
+                                let json_reply = json!(resp);
                                 Ok(warp::reply::json(&json_reply))
                             },
                             Err(_) => Err(warp::reject()),
