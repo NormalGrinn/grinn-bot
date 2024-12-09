@@ -89,8 +89,9 @@ pub struct AnimeGuess {
 
 #[derive(EnumString, Display, Debug)]
 pub enum SimilarityMeasure {
-    ZScore,
     CosineSim,
+    MeanAbsoluteDifferenceNorm,
+    MeanAbsoluteDifference,
 }
 
 #[derive(Debug)]

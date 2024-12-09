@@ -1,4 +1,4 @@
-use crate::{compat_check::{self, calculate_cosine_sim::calculate_cosine_sim, calculate_z_score::calculate_z}, types::{self, SimilarityMeasure}, Context, Error};
+use crate::{compat_check::{self, calculate_cosine_sim::calculate_cosine_sim, mean_abs_diff::calculate_mad, mean_abs_diff_norm::calculate_mad_norm}, types::{self, SimilarityMeasure}, Context, Error};
 use poise::CreateReply;
 use rusqlite::Result;
 use serenity::{all::CreateAttachment, futures::{self, Stream}};
@@ -13,7 +13,7 @@ async fn autocomplete_sim<'a>(
     ctx: Context<'_>,
     partial: &'a str,
 ) -> impl Stream<Item = String> + 'a {
-    let types: Vec<String> = vec!("ZScore".to_string(), "CosineSim".to_string());
+    let types: Vec<String> = vec!("CosineSim".to_string(), "MeanAbsoluteDifferenceNorm".to_string(), "MeanAbsoluteDifference".to_string());
     let mut similarity_tuples: Vec<(String, f64)> = types
     .iter()
     .map(|s| (s.clone(), jaro_winkler(&partial, s)))
@@ -23,11 +23,11 @@ async fn autocomplete_sim<'a>(
     futures::stream::iter(sorted)
 }
 
-async fn z_sim(mainlist: &Vec<types::AnimeScored>, friends: Vec<String>) -> Vec<(String, f64, usize)> {
+async fn cos_sim(mainlist: &Vec<types::AnimeScored>, friends: Vec<String>) -> Vec<(String, f64, usize)> {
     let mut results: Vec<(String, f64, usize)> = Vec::new(); 
     for friend in friends {
         let friend_list = compat_check::get_anime_list::get_anime_list(&friend).await;
-        let (z_score, shared) = calculate_z(mainlist, friend_list);
+        let (z_score, shared) = calculate_mad_norm(mainlist, friend_list);
         if z_score.is_nan() {
             continue
         }
@@ -37,18 +37,31 @@ async fn z_sim(mainlist: &Vec<types::AnimeScored>, friends: Vec<String>) -> Vec<
     results
 }
 
-async fn cos_sim(mainlist: &Vec<types::AnimeScored>, friends: Vec<String>) -> Vec<(String, f64, usize)> {
+async fn mad_sim_norm(mainlist: &Vec<types::AnimeScored>, friends: Vec<String>) -> Vec<(String, f64, usize)> {
     let mut results: Vec<(String, f64, usize)> = Vec::new(); 
     for friend in friends {
         let friend_list = compat_check::get_anime_list::get_anime_list(&friend).await;
-        let (z_score, shared) = calculate_cosine_sim(mainlist, friend_list);
+        let (z_score, shared) = calculate_mad_norm(mainlist, friend_list);
         if z_score.is_nan() {
             continue
         }
         results.push((friend, z_score, shared));
     }
     results.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-    results.reverse();
+    results
+}
+
+async fn mad_sim(mainlist: &Vec<types::AnimeScored>, friends: Vec<String>) -> Vec<(String, f64, usize)> {
+    let mut results: Vec<(String, f64, usize)> = Vec::new(); 
+    for friend in friends {
+        let friend_list = compat_check::get_anime_list::get_anime_list(&friend).await;
+        let (z_score, shared) = calculate_mad(mainlist, friend_list);
+        if z_score.is_nan() {
+            continue
+        }
+        results.push((friend, z_score, shared));
+    }
+    results.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
     results
 }
 
@@ -72,11 +85,12 @@ pub async fn check_compat(
     match sim_measure {
         Some(sim) => {
             match sim {
-                SimilarityMeasure::ZScore => results = {z_sim(&list_main, friends).await},
                 SimilarityMeasure::CosineSim => results =  cos_sim(&list_main, friends).await,
+                SimilarityMeasure::MeanAbsoluteDifferenceNorm => results = mad_sim_norm(&list_main, friends).await,
+                SimilarityMeasure::MeanAbsoluteDifference => results = mad_sim(&list_main, friends).await,
             }       
         },
-        None => results = z_sim(&list_main, friends).await,
+        None => results = mad_sim(&list_main, friends).await,
     }
 
     let mut buffer = String::new();
