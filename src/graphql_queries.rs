@@ -47,7 +47,7 @@ query ($userName: String)
 pub const USERANIMELISTQUERY: &str = "
 query ($userName: String)
 {
-  MediaListCollection (userName: $userName, type:ANIME, status:COMPLETED) {
+  MediaListCollection (userName: $userName, type:ANIME) {
     lists {
       entries {
         score(format: POINT_100)
