@@ -34,7 +34,6 @@ async fn cos_sim(mainlist: &Vec<types::AnimeScored>, friends: Vec<String>) -> Ve
         results.push((friend, z_score, shared));
     }
     results.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-    results.reverse();
     results
 }
 
