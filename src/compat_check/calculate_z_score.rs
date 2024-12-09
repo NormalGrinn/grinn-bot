@@ -39,11 +39,9 @@ pub fn calculate_z(list1: &Vec<types::AnimeScored>, mut list2: Vec<types::AnimeS
     let mut average1: f64 = 0.0;
     let mut average2: f64 = 0.0;
     
-    let mut i = 0;
-    while i < list3.len() {
+    for i in 0..list3.len() {
         average1 += list3[i].score1 as f64;
         average2 += list3[i].score2 as f64;
-        i += 1;
     }
 
     average1 = average1/(list3.len() as f64);
@@ -52,11 +50,9 @@ pub fn calculate_z(list1: &Vec<types::AnimeScored>, mut list2: Vec<types::AnimeS
     let mut standev1: f64 = 0.0;
     let mut standev2: f64 = 0.0;
 
-    i = 0;
-    while i < list3.len() {
+    for i in 0..list3.len() {
         standev1 += (list3[i].score1 as f64 - average1).powf(2.0);
         standev2 += (list3[i].score2 as f64 - average2).powf(2.0);
-        i += 1;
     }
 
     standev1 = (standev1/(list3.len() as f64 - 1.0)).sqrt();
@@ -64,13 +60,11 @@ pub fn calculate_z(list1: &Vec<types::AnimeScored>, mut list2: Vec<types::AnimeS
 
     let mut diff: f64 = 0.0;
 
-    i = 0;
-    while i < list3.len() {
+    for i in 0..list3.len() {
         let x = (list3[i].score1 as f64 - average1) / standev1;
         let y = (list3[i].score2 as f64 - average2) / standev2;
         let z = (x-y).abs();
         diff += z;
-        i += 1;
     }
     diff = diff / list3.len() as f64;
     (diff, list3.len())

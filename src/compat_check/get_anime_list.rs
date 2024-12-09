@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{collections::HashSet, time::Duration};
 
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
@@ -35,6 +35,18 @@ struct Entry {
 #[derive(Serialize, Deserialize, Debug)]
 struct Media {
     id: u64,
+}
+
+fn remove_duplicate_ids(mut input: Vec<types::AnimeScored>) -> Vec<types::AnimeScored> {
+    let mut seen = HashSet::new();
+    let mut unique = Vec::new();
+
+    for anime in input {
+        if seen.insert(anime.id) {
+            unique.push(anime);
+        }
+    }
+    unique
 }
 
 pub async fn get_anime_list(username: &String) -> Vec<types::AnimeScored> {
@@ -85,8 +97,11 @@ pub async fn get_anime_list(username: &String) -> Vec<types::AnimeScored> {
                 if result.data.MediaListCollection.lists.is_empty() {
                     return Vec::new();
                 }
-                let list = &result.data.MediaListCollection.lists[0];
-                for e in &list.entries {
+                let mut list: Vec<Entry> = Vec::new();
+                for mut l in result.data.MediaListCollection.lists {
+                    list.append(&mut l.entries);
+                }
+                for e in &list {
                     match e.score {
                         Some(s) => {
                             let scored_anime = types::AnimeScored {
@@ -98,7 +113,7 @@ pub async fn get_anime_list(username: &String) -> Vec<types::AnimeScored> {
                         None => continue,
                         }
                     }
-                return anime   
+                return remove_duplicate_ids(anime);
             },
             Err(_) => {
                 println!("Error with the request.");

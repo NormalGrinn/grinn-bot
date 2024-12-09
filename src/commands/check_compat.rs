@@ -51,7 +51,7 @@ pub async fn check_compat(
     let attachment = CreateAttachment::path(PATH).await?;
     let reply = CreateReply::default().attachment(attachment);
 
-    let message = format!("<{}> compat checking is done!", ctx.author().id.get());
+    let message = format!("<@{}> compat checking is done!", ctx.author().id.get());
     ctx.say(message).await?;
     ctx.send(reply).await?;
 
