@@ -53,13 +53,7 @@ query ($userName: String)
         score(format: POINT_100)
         media {
         id
-        idMal
         }
-      }
-    }
-    user {
-      mediaListOptions {
-        scoreFormat
       }
     }
   }
@@ -115,6 +109,27 @@ query ($animeID: Int)
         }
         isMain
       }
+    }
+  }
+}
+";
+
+pub const USERIDQUERY: &str = "
+query ($userName: String)
+{
+  User(name: $userName) {
+    id
+  }
+}
+";
+
+pub const FOLLOWINGQUERY: &str = "
+query ($page: Int, $userId: Int!)
+{
+  Page(page: $page, perPage: 50) {
+    following(userId: $userId) {
+      id
+      name
     }
   }
 }
