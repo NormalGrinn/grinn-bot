@@ -19,16 +19,16 @@ pub async fn check_compat(
     list_main.sort_by_key(|f| f.id);
     let friends = compat_check::get_friends::get_friends_names(&username).await;
     
-    // Name, compat
-    let mut results: Vec<(String, f64)> = Vec::new(); 
+    // Name, compat, shared
+    let mut results: Vec<(String, f64, usize)> = Vec::new(); 
     
     for friend in friends {
         let friend_list = compat_check::get_anime_list::get_anime_list(&friend).await;
-        let z_score = calculate_z(&list_main, friend_list);
+        let (z_score, shared) = calculate_z(&list_main, friend_list);
         if z_score.is_nan() {
             continue
         }
-        results.push((friend, z_score));
+        results.push((friend, z_score, shared));
     }
 
     let mut buffer = String::new();
@@ -36,7 +36,7 @@ pub async fn check_compat(
     results.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
 
     for res in results {
-        buffer.push_str(&format!("{}, {}\n", res.0, res.1));
+        buffer.push_str(&format!("{}, {}, shared entries: {}\n", res.0, res.1, res.2));
     }
 
     let mut file = OpenOptions::new()
@@ -51,6 +51,8 @@ pub async fn check_compat(
     let attachment = CreateAttachment::path(PATH).await?;
     let reply = CreateReply::default().attachment(attachment);
 
+    let message = format!("<{}> compat checking is done!", ctx.author().id.get());
+    ctx.say(message).await?;
     ctx.send(reply).await?;
 
     let _ = tokio::fs::remove_file(PATH).await; // Ignore error if the file doesn't exist
