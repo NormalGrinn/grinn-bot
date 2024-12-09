@@ -1,12 +1,23 @@
 use crate::{compat_check::{self, calculate_cosine_sim::calculate_cosine_sim, calculate_z_score::calculate_z}, types, Context, Error};
-use poise::CreateReply;
 use rusqlite::Result;
-use serenity::all::CreateAttachment;
-use tokio::fs::OpenOptions;
-use tokio::fs;
-use tokio::io::AsyncWriteExt;
+use serenity::futures;
+use strsim::jaro_winkler;
 
 const PATH: &str = "comp.txt";
+
+async fn autocomplete_sim<'a>(
+    ctx: Context<'_>,
+    partial: &'a str,
+) -> impl serenity::futures::Stream<Item = String> + 'a {
+    let types: Vec<String> = vec!("ZScore".to_string(), "CosineSim".to_string());
+    let mut similarity_tuples: Vec<(String, f64)> = types
+    .iter()
+    .map(|s| (s.clone(), jaro_winkler(&partial, s)))
+    .collect();
+    similarity_tuples.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    let sorted: Vec<String> = similarity_tuples.into_iter().map(|(s, _)| s).collect();
+    futures::stream::iter(sorted)
+}
 
 #[poise::command(prefix_command, track_edits, slash_command)]
 pub async fn check_compat_single(
@@ -16,6 +27,7 @@ pub async fn check_compat_single(
     #[description = "AL username 2"] 
     username2: String,
     #[description = "Similairty measure"]
+    #[autocomplete = "autocomplete_sim"]
     sim_measure: Option<types::SimilarityMeasure> 
 ) -> Result<(), Error> {
     ctx.defer().await?;
