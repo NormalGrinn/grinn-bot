@@ -39,7 +39,7 @@ pub struct Member{
 #[derive(Debug, Serialize, Clone)]
 pub struct TeamMembers {
     pub(crate) team: Team,
-    pub(crate) members: Vec<(Member)>,
+    pub(crate) members: Vec<Member>,
 }
 
 #[derive(Debug, Serialize, Clone)]
