@@ -1,4 +1,4 @@
-use crate::{compat_check::{self, calculate_z_score::calculate_z}, Context, Error};
+use crate::{compat_check::{self, calculate_cosine_sim::calculate_cosine_sim, calculate_z_score::calculate_z}, types::{self, SimilarityMeasure}, Context, Error};
 use poise::CreateReply;
 use rusqlite::Result;
 use serenity::all::CreateAttachment;
@@ -8,11 +8,39 @@ use tokio::io::AsyncWriteExt;
 
 const PATH: &str = "comp.txt";
 
+async fn z_sim(mainlist: &Vec<types::AnimeScored>, friends: Vec<String>) -> Vec<(String, f64, usize)> {
+    let mut results: Vec<(String, f64, usize)> = Vec::new(); 
+    for friend in friends {
+        let friend_list = compat_check::get_anime_list::get_anime_list(&friend).await;
+        let (z_score, shared) = calculate_z(mainlist, friend_list);
+        if z_score.is_nan() {
+            continue
+        }
+        results.push((friend, z_score, shared));
+    }
+    results
+}
+
+async fn cos_sim(mainlist: &Vec<types::AnimeScored>, friends: Vec<String>) -> Vec<(String, f64, usize)> {
+    let mut results: Vec<(String, f64, usize)> = Vec::new(); 
+    for friend in friends {
+        let friend_list = compat_check::get_anime_list::get_anime_list(&friend).await;
+        let (z_score, shared) = calculate_cosine_sim(mainlist, friend_list);
+        if z_score.is_nan() {
+            continue
+        }
+        results.push((friend, z_score, shared));
+    }
+    results
+}
+
 #[poise::command(prefix_command, track_edits, slash_command)]
 pub async fn check_compat(
     ctx: Context<'_>,
     #[description = "Your AL username"] 
     username: String,
+    #[description = "Similairty measure"]
+    sim_measure: Option<types::SimilarityMeasure> 
 ) -> Result<(), Error> {
     ctx.defer().await?;
     let mut list_main = compat_check::get_anime_list::get_anime_list(&username).await;
@@ -20,20 +48,22 @@ pub async fn check_compat(
     let friends = compat_check::get_friends::get_friends_names(&username).await;
     
     // Name, compat, shared
-    let mut results: Vec<(String, f64, usize)> = Vec::new(); 
+    let mut results: Vec<(String, f64, usize)>; 
     
-    for friend in friends {
-        let friend_list = compat_check::get_anime_list::get_anime_list(&friend).await;
-        let (z_score, shared) = calculate_z(&list_main, friend_list);
-        if z_score.is_nan() {
-            continue
-        }
-        results.push((friend, z_score, shared));
+    match sim_measure {
+        Some(sim) => {
+            match sim {
+                SimilarityMeasure::ZScore => results = z_sim(&list_main, friends).await,
+                SimilarityMeasure::CosineSim => results =  cos_sim(&list_main, friends).await,
+            }       
+        },
+        None => results = z_sim(&list_main, friends).await,
     }
 
     let mut buffer = String::new();
 
     results.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+    results.reverse();
 
     for res in results {
         buffer.push_str(&format!("{}, {}, shared entries: {}\n", res.0, res.1, res.2));

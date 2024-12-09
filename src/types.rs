@@ -1,5 +1,6 @@
 use serde::{Serialize, Deserialize};
 use rusqlite::types::{FromSql, ToSql, ToSqlOutput};
+use strum_macros::{EnumString, Display};
 /**
  * Struct for describing an AL tag
  * name: the name of this tag
@@ -84,6 +85,12 @@ pub struct AnimeGuess {
     pub(crate) id: u64,
     pub(crate) synonyms: Vec<String>,
     pub(crate) hints: Vec<Hint>, 
+}
+
+#[derive(EnumString, Display, Debug)]
+pub enum SimilarityMeasure {
+    ZScore,
+    CosineSim,
 }
 
 #[derive(Debug)]
