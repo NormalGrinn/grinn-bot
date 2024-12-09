@@ -83,7 +83,8 @@ async fn main() {
                     commands::teamswap::set_phase::set_phase(),
                     commands::teamswap::leave::leave(),
                     commands::teamswap::set_max_claims::set_max_claims(),
-                    commands::check_compat::check_compat(),
+                    commands::check_compat::check_compat::check_compat(),
+                    commands::check_compat::check_compat_single::check_compat_single(),
                     ],
         prefix_options: poise::PrefixFrameworkOptions {
             prefix: Some("~".into()),
