@@ -86,6 +86,12 @@ pub struct AnimeGuess {
     pub(crate) hints: Vec<Hint>, 
 }
 
+#[derive(Debug)]
+pub struct AnimeScored {
+    pub(crate) id: u64,
+    pub(crate) score: u64,
+}
+
 // Wrapper used for serialzing a Hint vector for SQL queries
 #[derive(Serialize, Deserialize, Debug)]
 pub struct HintWrapper {

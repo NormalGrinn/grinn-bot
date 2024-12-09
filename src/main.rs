@@ -14,6 +14,7 @@ mod anime_guessing_helpers;
 mod commands;
 mod team_swapping;
 mod api_routes;
+mod compat_check;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
@@ -82,6 +83,7 @@ async fn main() {
                     commands::teamswap::set_phase::set_phase(),
                     commands::teamswap::leave::leave(),
                     commands::teamswap::set_max_claims::set_max_claims(),
+                    commands::check_compat::check_compat(),
                     ],
         prefix_options: poise::PrefixFrameworkOptions {
             prefix: Some("~".into()),
