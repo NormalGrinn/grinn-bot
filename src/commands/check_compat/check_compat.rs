@@ -18,6 +18,7 @@ async fn z_sim(mainlist: &Vec<types::AnimeScored>, friends: Vec<String>) -> Vec<
         }
         results.push((friend, z_score, shared));
     }
+    results.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
     results
 }
 
@@ -31,6 +32,8 @@ async fn cos_sim(mainlist: &Vec<types::AnimeScored>, friends: Vec<String>) -> Ve
         }
         results.push((friend, z_score, shared));
     }
+    results.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+    results.reverse();
     results
 }
 
@@ -53,7 +56,7 @@ pub async fn check_compat(
     match sim_measure {
         Some(sim) => {
             match sim {
-                SimilarityMeasure::ZScore => results = z_sim(&list_main, friends).await,
+                SimilarityMeasure::ZScore => results = {z_sim(&list_main, friends).await},
                 SimilarityMeasure::CosineSim => results =  cos_sim(&list_main, friends).await,
             }       
         },
@@ -61,9 +64,6 @@ pub async fn check_compat(
     }
 
     let mut buffer = String::new();
-
-    results.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-    results.reverse();
 
     for res in results {
         buffer.push_str(&format!("{}, {}, shared entries: {}\n", res.0, res.1, res.2));
