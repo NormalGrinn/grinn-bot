@@ -1,6 +1,6 @@
 use std::{collections::HashSet, time::Duration};
 
-use reqwest::{Client, StatusCode};
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -37,7 +37,7 @@ struct Media {
     id: u64,
 }
 
-fn remove_duplicate_ids(mut input: Vec<types::AnimeScored>) -> Vec<types::AnimeScored> {
+fn remove_duplicate_ids(input: Vec<types::AnimeScored>) -> Vec<types::AnimeScored> {
     let mut seen = HashSet::new();
     let mut unique = Vec::new();
 
