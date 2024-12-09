@@ -31,7 +31,7 @@ pub fn calculate_mad(list1: &Vec<types::AnimeScored>, mut list2: Vec<types::Anim
     let len = list3.len().clone();
     let mut total_difference: f64 = 0.0;
     for entry in list3 {
-        let diff = (entry.score1 as i64 - entry.score2 as i64);
+        let diff = (entry.score1 as i64 - entry.score2 as i64).abs();
         total_difference += diff as f64;
     }
     (total_difference/(len as f64), len)
