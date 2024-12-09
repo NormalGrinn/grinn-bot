@@ -7,7 +7,7 @@ struct AnimeScores {
     score2: u64,
 }
 
-pub fn calculate_z(list1: &Vec<types::AnimeScored>, mut list2: Vec<types::AnimeScored>) -> f64 {
+pub fn calculate_z(list1: &Vec<types::AnimeScored>, mut list2: Vec<types::AnimeScored>) -> (f64, usize) {
     list2.sort_by_key(|f| f.id);
 
     let mut list3: Vec<AnimeScores> = Vec::new();
@@ -73,5 +73,5 @@ pub fn calculate_z(list1: &Vec<types::AnimeScored>, mut list2: Vec<types::AnimeS
         i += 1;
     }
     diff = diff / list3.len() as f64;
-    diff
+    (diff, list3.len())
 }

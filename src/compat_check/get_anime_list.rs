@@ -71,25 +71,33 @@ pub async fn get_anime_list(username: &String) -> Vec<types::AnimeScored> {
                     tokio::time::sleep(Duration::from_secs(2 * retries)).await;
                     continue;
                 }
-
-                let result: Response = serde_json::from_str(&response.text().await.expect("Error parsing message")).expect("Error parsing Json to string");
+                let result: Response;
+                // let result: Response = serde_json::from_str(&response.text().await.expect("Error parsing message")).expect("Error parsing Json to string");
+                let res: Result<Response, serde_json::Error> = serde_json::from_str(&response.text().await.expect("Error parsing message"));
+                match res {
+                    Ok(r) => result = r,
+                    Err(_) => {
+                        println!("Error fetching list, may be private");
+                        return Vec::new();
+                    },
+                }
                 let mut anime: Vec<types::AnimeScored> = Vec::new();
                 if result.data.MediaListCollection.lists.is_empty() {
                     return Vec::new();
                 }
                 let list = &result.data.MediaListCollection.lists[0];
                 for e in &list.entries {
-                match e.score {
-                Some(s) => {
-                let scored_anime = types::AnimeScored {
-                    id: e.media.id,
-                    score: s,
-                };
-                anime.push(scored_anime);
-                },
-                None => continue,
-                }
-                }
+                    match e.score {
+                        Some(s) => {
+                            let scored_anime = types::AnimeScored {
+                                id: e.media.id,
+                                score: s,
+                            };
+                            anime.push(scored_anime);
+                        },
+                        None => continue,
+                        }
+                    }
                 return anime   
             },
             Err(_) => {
