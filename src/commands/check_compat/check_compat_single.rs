@@ -1,4 +1,4 @@
-use crate::{compat_check::{self, calculate_cosine_sim::calculate_cosine_sim, calculate_z_score::calculate_z}, types, Context, Error};
+use crate::{compat_check::{self, mean_abs_diff::calculate_mad, calculate_cosine_sim::calculate_cosine_sim, mean_abs_diff_norm::calculate_mad_norm}, types, Context, Error};
 use rusqlite::Result;
 use serenity::futures;
 use strsim::jaro_winkler;
@@ -9,7 +9,7 @@ async fn autocomplete_sim<'a>(
     ctx: Context<'_>,
     partial: &'a str,
 ) -> impl serenity::futures::Stream<Item = String> + 'a {
-    let types: Vec<String> = vec!("ZScore".to_string(), "CosineSim".to_string());
+    let types: Vec<String> = vec!("CosineSim".to_string(), "MeanAbsoluteDifferenceNorm".to_string(), "MeanAbsoluteDifference".to_string());
     let mut similarity_tuples: Vec<(String, f64)> = types
     .iter()
     .map(|s| (s.clone(), jaro_winkler(&partial, s)))
@@ -39,11 +39,12 @@ pub async fn check_compat_single(
     match sim_measure {
         Some(sim) => {
             match sim {
-                types::SimilarityMeasure::ZScore => (sim_score, entries) = calculate_z(&list_main, list2),
                 types::SimilarityMeasure::CosineSim => (sim_score, entries) = calculate_cosine_sim(&list_main, list2),
+                types::SimilarityMeasure::MeanAbsoluteDifferenceNorm => (sim_score, entries) = calculate_mad_norm(&list_main, list2),
+                types::SimilarityMeasure::MeanAbsoluteDifference => (sim_score, entries) = calculate_mad(&list_main, list2),
             }
         },
-        None => (sim_score, entries) = calculate_z(&list_main, list2),
+        None => (sim_score, entries) = calculate_mad_norm(&list_main, list2),
     }
     let message = format!("{} has a compatibility score of {} with {}, and shares {} completed entries with them!", username1, sim_score, username2, entries);
     ctx.say(message).await?;

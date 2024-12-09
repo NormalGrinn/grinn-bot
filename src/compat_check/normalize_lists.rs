@@ -1,15 +1,19 @@
 use crate::types;
 
 #[derive(Debug)]
-struct AnimeScores {
-    id: u64,
-    score1: u64,
-    score2: u64,
+pub struct AnimeScores {
+    pub id: u64,
+    pub score1: u64,
+    pub score2: u64,
 }
 
-pub fn calculate_z(list1: &Vec<types::AnimeScored>, mut list2: Vec<types::AnimeScored>) -> (f64, usize) {
-    list2.sort_by_key(|f| f.id);
+#[derive(Debug)]
+pub struct NormalizedScores {
+    pub score1: f64,
+    pub score2: f64,
+}
 
+pub fn normalize(list1: &Vec<types::AnimeScored>, list2: &Vec<types::AnimeScored>) -> Vec<NormalizedScores> {
     let mut list3: Vec<AnimeScores> = Vec::new();
     
     let mut index1 = 0;
@@ -58,14 +62,15 @@ pub fn calculate_z(list1: &Vec<types::AnimeScored>, mut list2: Vec<types::AnimeS
     standev1 = (standev1/(list3.len() as f64 - 1.0)).sqrt();
     standev2 = (standev2/(list3.len() as f64 - 1.0)).sqrt();
 
-    let mut diff: f64 = 0.0;
-
+    let mut res_list: Vec<NormalizedScores> = Vec::new();
     for i in 0..list3.len() {
         let x = (list3[i].score1 as f64 - average1) / standev1;
         let y = (list3[i].score2 as f64 - average2) / standev2;
-        let z = (x-y).abs();
-        diff += z;
+        let new_entry = NormalizedScores {
+            score1: x,
+            score2: y,
+        };
+        res_list.push(new_entry);
     }
-    diff = diff / list3.len() as f64;
-    (diff, list3.len())
+    res_list
 }
