@@ -2,7 +2,6 @@ use std::{collections::HashMap, env, sync::{Arc, Mutex}, time::Duration};
 use database::start_db;
 use poise::serenity_prelude as serenity;
 use dotenvy::dotenv;
-use warp::Filter;
 
 mod graphql_queries;
 mod anime_guessing_game;
@@ -54,6 +53,7 @@ async fn main() {
                     commands::anime_guessing::giveup::giveup(), 
                     commands::check_compat::check_compat::check_compat(),
                     commands::check_compat::check_compat_single::check_compat_single(),
+                    commands::server_list::add_user::add_user(),
                     ],
         prefix_options: poise::PrefixFrameworkOptions {
             prefix: Some("~".into()),

@@ -51,6 +51,46 @@ pub struct SubmittedAnime {
     pub(crate) claimed_on: Option<String>,
 }
 
+pub struct UserList {
+    pub(crate) user_id: u64,
+    pub(crate) user_name: String,
+    pub(crate) user_score_type: ScoreType,
+    pub(crate) anime: Vec<UserAnimeInfo>
+}
+
+pub enum ScoreType {
+    POINT_100,
+    POINT_10_DECIMAL,
+    POINT_10,
+    POINT_5,
+    POINT_3,
+}
+
+pub enum AnimeStatus {
+    CURRENT,
+    PLANNING,
+    COMPLETED,
+    DROPPED,
+    PAUSED,
+    REPEATING,
+}
+
+pub struct UserAnimeInfo {
+    pub(crate) anime_id :u64,
+    pub(crate) titles: Title,
+    pub(crate) score: f64,
+    pub(crate) favourite: bool,
+    pub(crate) notes: Option<String>,
+    pub(crate) status: AnimeStatus,
+    pub(crate) repeats: u64,
+}
+
+pub struct Title {
+    pub(crate) romaji: Option<String>,
+    pub(crate) native: Option<String>,
+    pub(crate) english: Option<String>,
+}
+
 /**
  * Enum for describing the various types a hint can take on
  * Season: the airing season

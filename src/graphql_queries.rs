@@ -134,3 +134,34 @@ query ($page: Int, $userId: Int!)
   }
 }
 ";
+
+pub const USERLISTINFOQUERY: &str = "
+query ($userName: String)  
+{
+  MediaListCollection (userName: $userName, type:ANIME) {
+    lists {
+      entries {
+        score
+        media {
+        id
+          isFavourite
+          title {
+            romaji
+            native
+            english
+          }
+        }
+        notes
+        repeat
+        status
+      }
+    }
+  }
+  User (name: $userName) {
+    id
+    mediaListOptions {
+      scoreFormat
+    }
+  }
+}
+";

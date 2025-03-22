@@ -128,3 +128,7 @@ pub async fn set_anime_info(channel_id: u64, entry_info: types::AnimeGuess, gott
                                                                         &wrapped_synonyms, &wrapped_names))?;
     Ok(res)
 }
+
+pub async fn add_user(user_list: types::UserList) -> Result<usize> {
+    todo!()
+}
