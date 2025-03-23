@@ -90,7 +90,7 @@ pub async fn check_compat(
                 SimilarityMeasure::MeanAbsoluteDifference => results = mad_sim(&list_main, friends).await,
             }       
         },
-        None => results = mad_sim_norm(&list_main, friends).await,
+        None => results = mad_sim(&list_main, friends).await,
     }
 
     let mut buffer = String::new();
