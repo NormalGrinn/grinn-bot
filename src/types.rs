@@ -23,25 +23,6 @@ pub struct Staff {
     pub(crate) role: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Team {
-    pub(crate) team_id: u64,
-    pub(crate) team_image_url: Option<String>,
-    pub(crate) team_name: String,
-}
-
-#[derive(Debug, Serialize, Clone)]
-pub struct Member{
-    pub(crate) member_id: u64,
-    pub(crate) member_name: String,
-}
-
-#[derive(Debug, Serialize, Clone)]
-pub struct TeamMembers {
-    pub(crate) team: Team,
-    pub(crate) members: Vec<Member>,
-}
-
 #[derive(Debug, Serialize, Clone)]
 pub struct SubmittedAnime {
     pub(crate) anime_id: u64,
@@ -51,6 +32,7 @@ pub struct SubmittedAnime {
     pub(crate) claimed_on: Option<String>,
 }
 
+#[derive(Debug)]
 pub struct UserList {
     pub(crate) user_id: u64,
     pub(crate) user_name: String,
@@ -58,6 +40,7 @@ pub struct UserList {
     pub(crate) anime: Vec<UserAnimeInfo>
 }
 
+#[derive(Debug)]
 pub enum ScoreType {
     POINT_100,
     POINT_10_DECIMAL,
@@ -66,6 +49,7 @@ pub enum ScoreType {
     POINT_3,
 }
 
+#[derive(Debug)]
 pub enum AnimeStatus {
     CURRENT,
     PLANNING,
@@ -75,6 +59,21 @@ pub enum AnimeStatus {
     REPEATING,
 }
 
+#[derive(Debug)]
+pub struct ListEntry {
+    pub user_id: u64,
+    pub anime_id: u64,
+    pub anime_score: String,
+    pub is_favourite: bool,
+    pub notes: Option<String>,
+    pub rewatches: i64,
+    pub completion_status: String,
+    pub anime_names: Title,
+    pub user_name: String,
+    pub user_score_type: ScoreType,
+}
+
+#[derive(Debug)]
 pub struct UserAnimeInfo {
     pub(crate) anime_id :u64,
     pub(crate) titles: Title,
@@ -85,6 +84,7 @@ pub struct UserAnimeInfo {
     pub(crate) repeats: u64,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Title {
     pub(crate) romaji: Option<String>,
     pub(crate) native: Option<String>,
@@ -170,6 +170,41 @@ impl ToSql for StringVecWrapper {
     }
 }
 
+impl ToSql for ScoreType {
+    fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'_>> {
+        let score_type_str = match self {
+            ScoreType::POINT_100 => "POINT_100",
+            ScoreType::POINT_10_DECIMAL => "POINT_10_DECIMAL",
+            ScoreType::POINT_10 => "POINT_10",
+            ScoreType::POINT_5 => "POINT_5",
+            ScoreType::POINT_3 => "POINT_3",
+        };
+        Ok(ToSqlOutput::from(score_type_str))
+    }
+}
+
+impl ToSql for AnimeStatus {
+    fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'_>> {
+        let status_str = match self {
+            AnimeStatus::CURRENT => "CURRENT",
+            AnimeStatus::PLANNING => "PLANNING",
+            AnimeStatus::COMPLETED => "COMPLETED",
+            AnimeStatus::DROPPED => "DROPPED",
+            AnimeStatus::PAUSED => "PAUSED",
+            AnimeStatus::REPEATING => "REPEATING",
+        };
+        Ok(ToSqlOutput::from(status_str))
+    }
+}
+
+impl ToSql for Title {
+    fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'_>> {
+        let json_string = serde_json::to_string(self)
+            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+        Ok(ToSqlOutput::from(json_string))
+    }
+}
+
 impl From<&str> for HintWrapper {
     fn from(s: &str) -> Self {
         // Deserialize the JSON string into HintWrapper
@@ -199,5 +234,19 @@ impl FromSql for HintWrapper {
 impl FromSql for StringVecWrapper {
     fn column_result(value: rusqlite::types::ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
         value.as_str().map(Into::into)
+    }
+}
+
+impl FromSql for ScoreType {
+    fn column_result(value: rusqlite::types::ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
+        let score_type_str = value.as_str()?;
+        match score_type_str {
+            "POINT_100" => Ok(ScoreType::POINT_100),
+            "POINT_10_DECIMAL" => Ok(ScoreType::POINT_10_DECIMAL),
+            "POINT_10" => Ok(ScoreType::POINT_10),
+            "POINT_5" => Ok(ScoreType::POINT_5),
+            "POINT_3" => Ok(ScoreType::POINT_3),
+            _ => Err(rusqlite::types::FromSqlError::InvalidType)
+        }
     }
 }

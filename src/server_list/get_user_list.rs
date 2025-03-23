@@ -72,7 +72,7 @@ fn remove_duplicate_ids(input: Vec<Entry>) -> Vec<Entry> {
     unique
 }
 
-pub async fn get_user_list(username: &str) -> (Vec<types::UserAnimeInfo>, u64, types::ScoreType) {
+pub async fn get_user_list(username: &str) -> types::UserList {
     let client = Client::new();
     let json = json! (
         {
@@ -136,5 +136,11 @@ pub async fn get_user_list(username: &str) -> (Vec<types::UserAnimeInfo>, u64, t
         "POINT_3" => score_format = types::ScoreType::POINT_3,
         _ => score_format = types::ScoreType::POINT_10,
     }
-    (info_list, result.data.User.id, score_format)
+    let result = types::UserList {
+        user_id: result.data.User.id,
+        user_name: username.to_owned(),
+        user_score_type: score_format,
+        anime: info_list,
+    };
+    result
 }

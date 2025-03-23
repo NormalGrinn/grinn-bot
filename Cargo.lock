@@ -288,6 +288,7 @@ dependencies = [
  "regex",
  "reqwest",
  "rusqlite",
+ "rust-fuzzy-search",
  "serde",
  "serde_json",
  "serenity",
@@ -1275,6 +1276,12 @@ dependencies = [
  "libsqlite3-sys",
  "smallvec",
 ]
+
+[[package]]
+name = "rust-fuzzy-search"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a157657054ffe556d8858504af8a672a054a6e0bd9e8ee531059100c0fa11bb2"
 
 [[package]]
 name = "rustc-demangle"

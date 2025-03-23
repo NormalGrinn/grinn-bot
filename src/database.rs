@@ -1,7 +1,8 @@
-use rusqlite::{Connection, Result};
+use rusqlite::{params, Connection, Result};
 use crate::types;
 use strsim::jaro_winkler;
 const ANIME_GUESSING_PATH: &str = "databases/animeGuessing.db";
+const SERVER_LIST_PATH: &str = "databases/serverList.db";
 
 const GET_ANIME_GUESSING_ID: &str = "
 SELECT anime_guessing.anime_id FROM anime_guessing WHERE channel_id = ?1;
@@ -129,6 +130,119 @@ pub async fn set_anime_info(channel_id: u64, entry_info: types::AnimeGuess, gott
     Ok(res)
 }
 
-pub async fn add_user(user_list: types::UserList) -> Result<usize> {
-    todo!()
+pub async fn upsert_user(user_list: types::UserList) -> Result<()> {
+    const UPSERT_USER: &str = "
+    INSERT OR REPLACE INTO users (user_id, user_name, user_score_type)
+    VALUES (?1, ?2, ?3);
+    ";
+    const UPSERT_ANIME: &str = "
+    INSERT OR REPLACE INTO anime (anime_id, anime_names)
+    VALUES (?1, ?2);
+    ";
+    const UPSERT_ENTRY: &str = "
+    INSERT INTO list_entry_table (
+        user_id, anime_id, anime_score, is_favourite, notes, rewatches, completion_status
+    ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+    ON CONFLICT (user_id, anime_id) DO UPDATE SET
+        anime_score = excluded.anime_score,
+        is_favourite = excluded.is_favourite,
+        notes = excluded.notes,
+        rewatches = excluded.rewatches,
+        completion_status = excluded.completion_status;
+    ";
+    let mut conn = Connection::open(SERVER_LIST_PATH).map_err(|e| {
+        eprintln!("Failed to open database: {}", e);
+        e
+    })?;
+
+    let tx = conn.transaction().map_err(|e| {
+        eprintln!("Failed to start transaction: {}", e);
+        e
+    })?;
+
+    tx.execute(UPSERT_USER, rusqlite::params![user_list.user_id, user_list.user_name, user_list.user_score_type]).map_err(|e| {
+        eprintln!("Failed to upsert user: {}", e);
+        e
+    })?;
+    for anime in user_list.anime {
+        tx.execute(UPSERT_ANIME, rusqlite::params![anime.anime_id, anime.titles]).map_err(|e| {
+            eprintln!("Failed to upsert anime: {}", e);
+            e
+        })?;
+        tx.execute(UPSERT_ENTRY, rusqlite::params![user_list.user_id, anime.anime_id, anime.score, anime.favourite, anime.notes, anime.repeats, anime.status]).map_err(|e| {
+            eprintln!("Failed to upsert entry: {}", e);
+            e
+        })?;
+    }
+
+    tx.commit().map_err(|e| {
+        eprintln!("Failed to commit transaction: {}", e);
+        e
+    })?;
+
+    Ok(())
+}
+
+pub async fn get_server_anime_titles() -> Vec<String> {
+    const GET_TITLES: &str = "
+    SELECT anime_names FROM anime;
+    ";
+    let conn = Connection::open(SERVER_LIST_PATH).expect("Error making connection");
+    let mut result_titles: Vec<String> = Vec::new();
+    let mut titles_query = conn.prepare(GET_TITLES).expect("Error making query");
+    let titles_iter = titles_query.query_map((), 
+    |row| {
+        let titles: String = row.get(0).expect("Error mapping SQL to String");
+        Ok(titles)
+    }).expect("Error with the query iter");
+    for titles in titles_iter {
+        match titles {
+            Ok(t) => {
+                let anime_titles: types::Title = serde_json::from_str(&t).expect("Error parsing titles JSON");
+                anime_titles.romaji.map(|s| result_titles.push(s));
+                anime_titles.native.map(|s| result_titles.push(s));
+                anime_titles.english.map(|s| result_titles.push(s));
+            },
+            Err(_) => {
+                eprintln!("Error with titles");
+                continue;   
+            },
+        }
+    }
+    result_titles
+}
+
+pub async fn get_anime_info(anime_name: &str) -> Result<Vec<types::ListEntry>> {
+    let GET_ANIME_INFO_QUERY: &str = "
+    SELECT list_entry_table.*, anime.anime_names, users.user_name, users.user_score_type
+    FROM list_entry_table
+    JOIN anime ON list_entry_table.anime_id = anime.anime_id
+    JOIN users ON list_entry_table.user_id = users.user_id
+    WHERE LOWER(json_extract(anime.anime_names, '$.romaji')) LIKE LOWER(?1)
+        OR LOWER(json_extract(anime.anime_names, '$.native')) LIKE LOWER(?1)
+        OR LOWER(json_extract(anime.anime_names, '$.english')) LIKE LOWER(?1);
+    ";
+    let conn = Connection::open(SERVER_LIST_PATH)?;
+    let mut result_info: Vec<types::UserAnimeInfo> = Vec::new();
+    let mut info_query = conn.prepare(GET_ANIME_INFO_QUERY)?;
+    let mut info_iter = info_query.query_map(rusqlite::params![anime_name],
+    |row| {
+        let anime_names_json: String = row.get(7)?;
+        let anime_names: types::Title = serde_json::from_str(&anime_names_json)
+            .map_err(|e| rusqlite::Error::ExecuteReturnedResults)?;
+        Ok(types::ListEntry {
+            user_id: row.get(0)?,
+            anime_id: row.get(1)?,
+            anime_score: row.get(2)?,
+            is_favourite: row.get(3)?,
+            notes: row.get(4)?,
+            rewatches: row.get(5)?,
+            completion_status: row.get(6)?,
+            anime_names,
+            user_name: row.get(8)?, // user_name is the 9th column (index 8)
+            user_score_type: row.get(9)?, // user_score_type is the 10th column (index 9)
+        })
+    })?
+    .collect::<Result<Vec<types::ListEntry>>>();
+    info_iter
 }
