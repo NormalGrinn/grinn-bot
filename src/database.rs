@@ -183,6 +183,29 @@ pub async fn upsert_user(user_list: types::UserList) -> Result<()> {
     Ok(())
 }
 
+pub async fn remove_user(username: &str) -> Result<()> {
+    const ID_QUERY: &str = "
+    SELECT user_id FROM users WHERE user_name = ?1;
+    ";
+    const DELETE_ENTRY_QUERY: &str = "
+    DELETE FROM list_entry_table WHERE user_id = ?1;
+    ";
+    const DELETE_USER_QUERY: &str = "
+    DELETE FROM users WHERE user_id = ?1;
+    ";
+    let mut conn = Connection::open(SERVER_LIST_PATH)?;
+    let tx = conn.transaction()?;
+    let user_id: Option<u64> = tx.query_row(ID_QUERY, rusqlite::params![username], |row| row.get(0))?;
+    if let Some(user_id) = user_id {
+        tx.execute(DELETE_ENTRY_QUERY, rusqlite::params![user_id])?;
+        tx.execute(DELETE_USER_QUERY, rusqlite::params![user_id])?;
+    } else {
+        println!("User '{}' not found", username);
+    }
+    tx.commit()?;
+    Ok(())
+}
+
 pub async fn get_server_anime_titles() -> Vec<String> {
     const GET_TITLES: &str = "
     SELECT anime_names FROM anime;
@@ -227,6 +250,7 @@ pub async fn get_anime_info(anime_name: &str) -> Result<Vec<types::ListEntry>> {
     let mut info_query = conn.prepare(GET_ANIME_INFO_QUERY)?;
     let mut info_iter = info_query.query_map(rusqlite::params![anime_name],
     |row| {
+        println!("{:?}", row);
         let anime_names_json: String = row.get(7)?;
         let anime_names: types::Title = serde_json::from_str(&anime_names_json)
             .map_err(|e| rusqlite::Error::ExecuteReturnedResults)?;

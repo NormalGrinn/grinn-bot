@@ -55,6 +55,7 @@ async fn main() {
                     commands::check_compat::check_compat_single::check_compat_single(),
                     commands::server_list::add_user::add_user(),
                     commands::server_list::show_anime::show_anime(),
+                    commands::server_list::remove_user::remove_user(),
                     ],
         prefix_options: poise::PrefixFrameworkOptions {
             prefix: Some("~".into()),

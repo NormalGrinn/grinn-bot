@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use serde::{Serialize, Deserialize};
 use rusqlite::types::{FromSql, ToSql, ToSqlOutput};
 use strum_macros::{EnumString, Display};
@@ -63,7 +65,7 @@ pub enum AnimeStatus {
 pub struct ListEntry {
     pub user_id: u64,
     pub anime_id: u64,
-    pub anime_score: String,
+    pub anime_score: f64,
     pub is_favourite: bool,
     pub notes: Option<String>,
     pub rewatches: i64,
@@ -72,6 +74,38 @@ pub struct ListEntry {
     pub user_name: String,
     pub user_score_type: ScoreType,
 }
+
+impl ListEntry {
+    fn normalize_score(&self) -> f64 {
+        match self.user_score_type {
+            ScoreType::POINT_100 => self.anime_score,
+            ScoreType::POINT_10_DECIMAL => self.anime_score * 10.0,
+            ScoreType::POINT_10 => self.anime_score * 10.0,
+            ScoreType::POINT_5 => self.anime_score * 20.0,
+            ScoreType::POINT_3 => self.anime_score * 33.33,
+        }
+    }
+}
+
+impl PartialOrd for ListEntry {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.normalize_score().partial_cmp(&other.normalize_score())
+    }
+}
+
+impl Ord for ListEntry {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap_or(Ordering::Equal)
+    }
+}
+
+impl PartialEq for ListEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp(other) == Ordering::Equal
+    }
+}
+
+impl Eq for ListEntry {}
 
 #[derive(Debug)]
 pub struct UserAnimeInfo {

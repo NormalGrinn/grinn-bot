@@ -1,6 +1,7 @@
 use crate::{database, Context, Error};
+use poise::CreateReply;
 use rusqlite::Result;
-use serenity::futures;
+use serenity::{all::{CreateEmbed, CreateMessage}, futures};
 use ::serenity::futures::Stream;
 use rust_fuzzy_search::fuzzy_compare;
 
@@ -29,12 +30,20 @@ pub async fn show_anime(
 ) -> Result<(), Error> {
     let anime_info = database::get_anime_info(&anime_name).await;
     match anime_info {
-        Ok(info) => {
-
+        Ok(mut info) => {
+            info.sort();
+            info.reverse();
+            let title = format!("Anime info for: {}", anime_name);
+            let mut embed = CreateEmbed::new().title(title);
+            for (_i, entry) in info.iter().enumerate().take(25) {
+                embed = embed.field(&entry.user_name, entry.anime_score.to_string(), false);
+            }
+            let message = CreateReply::default().embed(embed);
+            ctx.send(message).await?;
         },
         Err(e) => {
             eprintln!("{}", e);
-            ctx.say("An error occured getting the anime info");
+            ctx.say("An error occured getting the anime info").await?;
         },
     }
     Ok(())
