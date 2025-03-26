@@ -31,6 +31,14 @@ pub async fn show_anime(
     let anime_info = database::get_anime_info(&anime_name).await;
     match anime_info {
         Ok(mut info) => {
+            let mut num_of_scores = 0;
+            let mut total_score: f64 = 0.0;
+            for e in &info {
+                if e.anime_score != 0.0 {
+                    num_of_scores += 1;
+                    total_score += e.anime_score;
+                }
+            }
             info.sort();
             info.reverse();
             let title = format!("Anime info for: {}", anime_name);

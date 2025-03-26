@@ -51,6 +51,40 @@ pub enum ScoreType {
     POINT_3,
 }
 
+impl ScoreType {
+    pub fn to_string(&self, score: f64) -> String {
+        if score >= 0.0 {
+            return "".to_string()
+        }
+        match self {
+            ScoreType::POINT_100 => score.to_string(),
+            ScoreType::POINT_10_DECIMAL => score.to_string(),
+            ScoreType::POINT_10 => score.to_string(),
+            ScoreType::POINT_5 => {
+                if score > 4.0 { return "✰✰✰✰✰".to_string() }
+                else if score > 3.0 { return "✰✰✰✰".to_string() }
+                else if score > 2.0 { return "✰✰✰".to_string() }
+                else if score > 1.0 { return "✰✰".to_string() }
+                else { return "✰".to_string() }
+            },
+            ScoreType::POINT_3 => {
+                if score > 2.0 { return ":)".to_string()}
+                else if score > 1.0 { return ":|".to_string()}
+                else { return ":(".to_string()}
+            },
+        }
+    }
+
+    pub fn scale_score(&self) -> f64 {
+        match self {
+            ScoreType::POINT_100 => return 1.0,
+            ScoreType::POINT_10_DECIMAL => return 10.0,
+            ScoreType::POINT_10 => return 10.0,
+            ScoreType::POINT_5 => return 20.0,
+            ScoreType::POINT_3 => return 33.33,
+        }
+    }
+}
 #[derive(Debug)]
 pub enum AnimeStatus {
     CURRENT,
@@ -77,13 +111,7 @@ pub struct ListEntry {
 
 impl ListEntry {
     fn normalize_score(&self) -> f64 {
-        match self.user_score_type {
-            ScoreType::POINT_100 => self.anime_score,
-            ScoreType::POINT_10_DECIMAL => self.anime_score * 10.0,
-            ScoreType::POINT_10 => self.anime_score * 10.0,
-            ScoreType::POINT_5 => self.anime_score * 20.0,
-            ScoreType::POINT_3 => self.anime_score * 33.33,
-        }
+        return self.anime_score * self.user_score_type.scale_score()
     }
 }
 
