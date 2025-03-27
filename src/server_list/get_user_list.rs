@@ -5,6 +5,8 @@ use reqwest::Client;
 use serde::Deserialize;
 use serde_json::json;
 
+use super::get_favs;
+
 #[derive(Deserialize, Debug)]
 struct Response {
     data: Data,
@@ -52,22 +54,6 @@ struct MediaTitle {
 struct User {
     id: u64,
     mediaListOptions: MediaListOptions,
-    favourites: Favourites,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct FavouriteAnime {
-    nodes: Option<Vec<AnimeID>>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct AnimeID {
-    id: u64,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Favourites {
-    anime: FavouriteAnime,
 }
 
 #[derive(Deserialize, Debug)]
@@ -99,14 +85,14 @@ pub async fn get_user_list(username: &str) -> types::UserList {
     );
 
     let resp = client.post("https://graphql.anilist.co/")
-    .header("Content-Type", "application/json")
-    .header("Accept", "application/json")
-    .body(json.to_string())
-    .send()
-    .await
-    .unwrap()
-    .text()
-    .await;
+        .header("Content-Type", "application/json")
+        .header("Accept", "application/json")
+        .body(json.to_string())
+        .send()
+        .await
+        .unwrap()
+        .text()
+        .await;
     let result: Response = serde_json::from_str(&resp.unwrap()).unwrap();
     let mut list: Vec<Entry> = Vec::new();
     for mut l in result.data.MediaListCollection.lists {
@@ -142,14 +128,9 @@ pub async fn get_user_list(username: &str) -> types::UserList {
         };
         info_list.push(new_entry);
     }
-    match result.data.User.favourites.anime.nodes {
-        Some(nodes) => {
-            let id_nodes: Vec<u64> = nodes.iter().map(|anime| anime.id).collect();
-            for entry in &mut info_list {
-                if id_nodes.contains(&entry.anime_id) {entry.favourite = true;}
-            }
-        },
-        None => (),
+    let id_nodes: Vec<u64> = get_favs::get_favs(username).await;
+    for entry in &mut info_list {
+        if id_nodes.contains(&entry.anime_id) {entry.favourite = true;}
     }
     let score_format : types::ScoreType;
     match result.data.User.mediaListOptions.scoreFormat.as_str() {

@@ -16,7 +16,7 @@ async fn autocomplete_anime<'a>(
     names.dedup();
     let mut similarity_tuples: Vec<(String, f32)> = names
         .iter()
-        .map(|s| (s.clone(), fuzzy_compare(partial, s)))
+        .map(|s| (s.clone(), fuzzy_compare(&partial.to_lowercase(), &s.to_lowercase())))
         .collect();
     similarity_tuples.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
     let titles: Vec<String> = similarity_tuples.into_iter().map(|(s, _)| s).collect();
