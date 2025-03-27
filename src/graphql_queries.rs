@@ -144,7 +144,6 @@ query ($userName: String)
         score
         media {
         id
-          isFavourite
           title {
             romaji
             native
@@ -161,6 +160,13 @@ query ($userName: String)
     id
     mediaListOptions {
       scoreFormat
+    }
+    favourites {
+      anime {
+        nodes {
+          id
+        }
+      }
     }
   }
 }
