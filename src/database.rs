@@ -250,7 +250,6 @@ pub async fn get_anime_info(anime_name: &str) -> Result<Vec<types::ListEntry>> {
     let mut info_query = conn.prepare(GET_ANIME_INFO_QUERY)?;
     let mut info_iter = info_query.query_map(rusqlite::params![anime_name],
     |row| {
-        println!("{:?}", row);
         let anime_names_json: String = row.get(7)?;
         let anime_names: types::Title = serde_json::from_str(&anime_names_json)
             .map_err(|e| rusqlite::Error::ExecuteReturnedResults)?;

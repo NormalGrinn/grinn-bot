@@ -3,9 +3,17 @@ use std::slice;
 use crate::{database, server_list::embed_helpers, types, Context, Error};
 use poise::CreateReply;
 use rusqlite::Result;
-use serenity::{all::{CreateEmbed, CreateEmbedFooter, CreateMessage}, futures};
+use serenity::{all::{ActionRow, ButtonStyle, Colour, CreateActionRow, CreateButton, CreateEmbed, CreateEmbedFooter, CreateMessage, EventHandler}, async_trait, futures};
 use ::serenity::futures::Stream;
 use rust_fuzzy_search::fuzzy_compare;
+
+
+struct Handler;
+
+#[async_trait]
+impl EventHandler for Handler {
+    
+}
 
 async fn autocomplete_anime<'a>(
     ctx: Context<'_>,
@@ -33,6 +41,10 @@ pub async fn show_anime(
     let anime_info = database::get_anime_info(&anime_name).await;
     match anime_info {
         Ok(mut info) => {
+            let button1 = CreateButton::new("prev").label("prev 20").style(ButtonStyle::Primary);
+            let button2 = CreateButton::new("next").label("next 20").style(ButtonStyle::Primary);
+            let buttons: Vec<CreateButton> = vec![button1, button2];
+            let action_row = vec![CreateActionRow::Buttons(buttons)];
             let mut num_of_scores: f64 = 0.0;
             let mut total_score: f64 = 0.0;
             for e in &info {
@@ -55,11 +67,11 @@ pub async fn show_anime(
             let title = format!("Anime info for: {}", anime_name);
             let footer_text = format!("Mean score: {:.2}, standard deviation: {:.2}", scores_mean, std_div);
             let footer = CreateEmbedFooter::new(footer_text);
-            let mut embed = CreateEmbed::new().title(title).footer(footer);
+            let mut embed = CreateEmbed::new().title(title).footer(footer).colour(Colour::PURPLE);
             let slice = &info[..info.len().min(20)];
             let field_info = embed_helpers::create_ranking_field(slice);
             embed = embed.field("Rankings", field_info, false);
-            let message = CreateReply::default().embed(embed);
+            let message = CreateReply::default().embed(embed).components(action_row);
             ctx.send(message).await?;
         },
         Err(e) => {

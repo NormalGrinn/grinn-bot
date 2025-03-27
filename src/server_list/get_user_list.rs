@@ -4,6 +4,7 @@ use crate::{graphql_queries, types};
 use reqwest::Client;
 use serde::Deserialize;
 use serde_json::json;
+use serenity::{all::EventHandler, async_trait};
 
 use super::get_favs;
 
