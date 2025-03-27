@@ -79,7 +79,7 @@ impl AnimeStatus {
             AnimeStatus::PLANNING => "ptw",
             AnimeStatus::COMPLETED => "fin",
             AnimeStatus::DROPPED => "drp",
-            AnimeStatus::PAUSED => "psd",
+            AnimeStatus::PAUSED => "paus",
             AnimeStatus::REPEATING => "rpt",
         }
     }
@@ -104,22 +104,24 @@ impl ListEntry {
         return self.anime_score * self.user_score_type.scale_score()
     }
     pub fn display_score(&self) -> String {
-        match self.user_score_type {
-            ScoreType::POINT_100 => self.anime_score.to_string(),
-            ScoreType::POINT_10_DECIMAL => self.anime_score.to_string(),
-            ScoreType::POINT_10 => self.anime_score.to_string(),
-            ScoreType::POINT_5 => {
-                if self.anime_score > 4.0 {"✰✰✰✰✰".to_string()}
-                else if self.anime_score > 3.0 {"✰✰✰✰".to_string()}
-                else if self.anime_score > 2.0 {"✰✰✰".to_string()}
-                else if self.anime_score > 1.0 {"✰✰".to_string()}
-                else {"✰".to_string()}
-            },
-            ScoreType::POINT_3 => {
-                if self.anime_score > 2.0 {":)".to_string()}
-                else if self.anime_score > 1.0 {":|".to_string()}
-                else {":(".to_string()}
-            },
+        if self.anime_score == 0.0 {"-".to_string()} else {
+            match self.user_score_type {
+                ScoreType::POINT_100 => self.anime_score.to_string(),
+                ScoreType::POINT_10_DECIMAL => self.anime_score.to_string(),
+                ScoreType::POINT_10 => self.anime_score.to_string(),
+                ScoreType::POINT_5 => {
+                    if self.anime_score > 4.0 {"✰✰✰✰✰".to_string()}
+                    else if self.anime_score > 3.0 {"✰✰✰✰".to_string()}
+                    else if self.anime_score > 2.0 {"✰✰✰".to_string()}
+                    else if self.anime_score > 1.0 {"✰✰".to_string()}
+                    else {"✰".to_string()}
+                },
+                ScoreType::POINT_3 => {
+                    if self.anime_score > 2.0 {":)".to_string()}
+                    else if self.anime_score > 1.0 {":|".to_string()}
+                    else {":(".to_string()}
+                },
+            }
         }
     }
 }

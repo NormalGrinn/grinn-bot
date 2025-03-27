@@ -7,6 +7,7 @@ pub async fn add_user(
     #[description = "AL username"] 
     username: String,
 ) -> Result<(), Error> {
+    ctx.defer().await?;
     let user_list = get_user_list::get_user_list(&username).await;
     let res = database::upsert_user(user_list).await;
     let _ = match res {

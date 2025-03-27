@@ -161,12 +161,22 @@ query ($userName: String)
     mediaListOptions {
       scoreFormat
     }
+  }
+}
+";
+
+pub const FAVSQUERY: &str = "
+query ($userName: String, $page: Int) {
+  User(name: $userName) {
     favourites {
-      anime {
-        nodes {
-          id
+        anime (page: $page, perPage: 25) {
+            nodes {
+                id
+            }
+            pageInfo {
+                hasNextPage
+            }
         }
-      }
     }
   }
 }
