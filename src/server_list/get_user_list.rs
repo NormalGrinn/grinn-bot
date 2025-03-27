@@ -38,7 +38,6 @@ struct Entry {
 #[derive(Deserialize, Debug)]
 struct Media {
     id: u64,
-    isFavourite: bool,
     title: MediaTitle,
 }
 
@@ -53,6 +52,22 @@ struct MediaTitle {
 struct User {
     id: u64,
     mediaListOptions: MediaListOptions,
+    favourites: Favourites,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FavouriteAnime {
+    nodes: Option<Vec<AnimeID>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AnimeID {
+    id: u64,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Favourites {
+    anime: FavouriteAnime,
 }
 
 #[derive(Deserialize, Debug)]
@@ -120,12 +135,21 @@ pub async fn get_user_list(username: &str) -> types::UserList {
             anime_id: anime.media.id,
             titles: title,
             score: anime.score,
-            favourite: anime.media.isFavourite,
+            favourite: false,
             notes: anime.notes,
             status: anime_status,
             repeats: anime.repeat,
         };
         info_list.push(new_entry);
+    }
+    match result.data.User.favourites.anime.nodes {
+        Some(nodes) => {
+            let id_nodes: Vec<u64> = nodes.iter().map(|anime| anime.id).collect();
+            for entry in &mut info_list {
+                if id_nodes.contains(&entry.anime_id) {entry.favourite = true;}
+            }
+        },
+        None => (),
     }
     let score_format : types::ScoreType;
     match result.data.User.mediaListOptions.scoreFormat.as_str() {

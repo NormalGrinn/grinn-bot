@@ -1,7 +1,9 @@
-use crate::{database, Context, Error};
+use std::slice;
+
+use crate::{database, server_list::embed_helpers, types, Context, Error};
 use poise::CreateReply;
 use rusqlite::Result;
-use serenity::{all::{CreateEmbed, CreateMessage}, futures};
+use serenity::{all::{CreateEmbed, CreateEmbedFooter, CreateMessage}, futures};
 use ::serenity::futures::Stream;
 use rust_fuzzy_search::fuzzy_compare;
 
@@ -31,13 +33,32 @@ pub async fn show_anime(
     let anime_info = database::get_anime_info(&anime_name).await;
     match anime_info {
         Ok(mut info) => {
+            let mut num_of_scores: f64 = 0.0;
+            let mut total_score: f64 = 0.0;
+            for e in &info {
+                if e.anime_score != 0.0 {
+                    num_of_scores += 1.0;
+                    total_score += e.normalized_score();
+                }
+            }
+            let scores_mean = total_score / num_of_scores; 
+            let mut square_divs: f64 = 0.0;
+            for e in &info {
+                if e.anime_score != 0.0 {
+                    square_divs += (e.normalized_score() - scores_mean).powf(2.0);
+                }
+            }
+            let var = square_divs / num_of_scores;
+            let std_div = var.sqrt();
             info.sort();
             info.reverse();
             let title = format!("Anime info for: {}", anime_name);
-            let mut embed = CreateEmbed::new().title(title);
-            for (_i, entry) in info.iter().enumerate().take(25) {
-                embed = embed.field(&entry.user_name, entry.anime_score.to_string(), false);
-            }
+            let footer_text = format!("Mean score: {:.2}, standard deviation: {:.2}", scores_mean, std_div);
+            let footer = CreateEmbedFooter::new(footer_text);
+            let mut embed = CreateEmbed::new().title(title).footer(footer);
+            let slice = &info[..info.len().min(20)];
+            let field_info = embed_helpers::create_ranking_field(slice);
+            embed = embed.field("Rankings", field_info, false);
             let message = CreateReply::default().embed(embed);
             ctx.send(message).await?;
         },

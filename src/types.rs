@@ -51,6 +51,17 @@ pub enum ScoreType {
     POINT_3,
 }
 
+impl ScoreType {
+    pub fn scale_score(&self) -> f64 {
+        match self {
+            ScoreType::POINT_100 => return 1.0,
+            ScoreType::POINT_10_DECIMAL => return 10.0,
+            ScoreType::POINT_10 => return 10.0,
+            ScoreType::POINT_5 => return 20.0,
+            ScoreType::POINT_3 => return 33.33,
+        }
+    }
+}
 #[derive(Debug)]
 pub enum AnimeStatus {
     CURRENT,
@@ -61,6 +72,19 @@ pub enum AnimeStatus {
     REPEATING,
 }
 
+impl AnimeStatus {
+    pub fn short_display(&self) -> &str {
+        match self {
+            AnimeStatus::CURRENT => "wtch",
+            AnimeStatus::PLANNING => "ptw",
+            AnimeStatus::COMPLETED => "fin",
+            AnimeStatus::DROPPED => "drp",
+            AnimeStatus::PAUSED => "psd",
+            AnimeStatus::REPEATING => "rpt",
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct ListEntry {
     pub user_id: u64,
@@ -69,27 +93,40 @@ pub struct ListEntry {
     pub is_favourite: bool,
     pub notes: Option<String>,
     pub rewatches: i64,
-    pub completion_status: String,
+    pub completion_status: AnimeStatus,
     pub anime_names: Title,
     pub user_name: String,
     pub user_score_type: ScoreType,
 }
 
 impl ListEntry {
-    fn normalize_score(&self) -> f64 {
+    pub fn normalized_score(&self) -> f64 {
+        return self.anime_score * self.user_score_type.scale_score()
+    }
+    pub fn display_score(&self) -> String {
         match self.user_score_type {
-            ScoreType::POINT_100 => self.anime_score,
-            ScoreType::POINT_10_DECIMAL => self.anime_score * 10.0,
-            ScoreType::POINT_10 => self.anime_score * 10.0,
-            ScoreType::POINT_5 => self.anime_score * 20.0,
-            ScoreType::POINT_3 => self.anime_score * 33.33,
+            ScoreType::POINT_100 => self.anime_score.to_string(),
+            ScoreType::POINT_10_DECIMAL => self.anime_score.to_string(),
+            ScoreType::POINT_10 => self.anime_score.to_string(),
+            ScoreType::POINT_5 => {
+                if self.anime_score > 4.0 {"✰✰✰✰✰".to_string()}
+                else if self.anime_score > 3.0 {"✰✰✰✰".to_string()}
+                else if self.anime_score > 2.0 {"✰✰✰".to_string()}
+                else if self.anime_score > 1.0 {"✰✰".to_string()}
+                else {"✰".to_string()}
+            },
+            ScoreType::POINT_3 => {
+                if self.anime_score > 2.0 {":)".to_string()}
+                else if self.anime_score > 1.0 {":|".to_string()}
+                else {":(".to_string()}
+            },
         }
     }
 }
 
 impl PartialOrd for ListEntry {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.normalize_score().partial_cmp(&other.normalize_score())
+        self.normalized_score().partial_cmp(&other.normalized_score())
     }
 }
 
@@ -284,3 +321,27 @@ impl FromSql for ScoreType {
         }
     }
 }
+
+impl FromSql for AnimeStatus {
+    fn column_result(value: rusqlite::types::ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
+        let status_type_str = value.as_str()?;
+        match status_type_str {
+            "CURRENT" => Ok(AnimeStatus::CURRENT),
+            "PLANNING" => Ok(AnimeStatus::PLANNING),
+            "COMPLETED" => Ok(AnimeStatus::COMPLETED),
+            "DROPPED" => Ok(AnimeStatus::DROPPED),
+            "PAUSED" => Ok(AnimeStatus::PAUSED),
+            "REPEATING" => Ok(AnimeStatus::REPEATING),
+            _ => Err(rusqlite::types::FromSqlError::InvalidType)
+        }
+    }
+}
+
+/*
+    CURRENT,
+    PLANNING,
+    COMPLETED,
+    DROPPED,
+    PAUSED,
+    REPEATING,
+*/
