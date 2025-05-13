@@ -1,3 +1,5 @@
+use std::iter;
+
 use crate::{Context, Error};
 use rusqlite::Result;
 use rust_fuzzy_search::fuzzy_compare;
@@ -16,10 +18,15 @@ async fn autocomplete_guess<'a>(
     names.sort();
     let mut similarity_tuples: Vec<(String, f32)> = names
         .iter()
+        .filter(|s| s.len() <= 100)
         .map(|s| (s.clone(), fuzzy_compare(&partial.to_lowercase(), &s.to_lowercase())))
         .collect();
     similarity_tuples.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-    let guesses: Vec<String> = similarity_tuples.into_iter().map(|(s, _)| s).collect();
+    let guesses: Vec<String> = similarity_tuples
+        .into_iter()
+        .map(|(s, _)| s)
+        .take(25) 
+        .collect();
     futures::stream::iter(guesses)
 }
 
