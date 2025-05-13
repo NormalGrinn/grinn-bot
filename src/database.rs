@@ -41,8 +41,8 @@ pub fn start_db() -> bool {
 	potential_hints TEXT,
     hints TEXT,
 	anime_synonyms TEXT,
-    all_names TEXT;
-    );";
+    all_names TEXT);
+    ";
     let potential_conn = Connection::open(ANIME_GUESSING_PATH);
     let _ = match potential_conn {
         Ok(conn) => {
