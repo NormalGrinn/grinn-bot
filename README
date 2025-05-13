@@ -1,2 +1,1 @@
 To run the bot create a .env file and an /databases folder with the database schema.
-To make the API route accesable, change the IP address in main to 0 0 0 0

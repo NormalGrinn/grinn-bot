@@ -1,6 +1,5 @@
-use rusqlite::{params, Connection, Result};
+use rusqlite::{Connection, Result};
 use crate::types;
-use strsim::jaro_winkler;
 const ANIME_GUESSING_PATH: &str = "databases/animeGuessing.db";
 const SERVER_LIST_PATH: &str = "databases/serverList.db";
 
@@ -35,14 +34,15 @@ const UPDATE_HINTS: &str = "
 ";
 
 pub fn start_db() -> bool {
-    let create_table = "CREATE TABLE anime_guessing(
+    let create_table = "
+    CREATE TABLE anime_guessing(
     channel_id INTEGER PRIMARY KEY,
     anime_id INTEGER,
 	potential_hints TEXT,
     hints TEXT,
 	anime_synonyms TEXT,
-    all_names TEXT
-    );";
+    all_names TEXT);
+    ";
     let potential_conn = Connection::open(ANIME_GUESSING_PATH);
     let _ = match potential_conn {
         Ok(conn) => {
@@ -82,20 +82,14 @@ pub async fn get_hints(channel_id: u64) -> Result<(Vec<types::Hint>, Vec<String>
 }
 
 //Filters all the names and returns the ones closest to the guess
-pub async fn get_filtered_names(partial: &str, channel_id: u64) -> Vec<String> {
+pub async fn get_filtered_names(channel_id: u64) -> Vec<String> {
     let potentail_conn = Connection::open(ANIME_GUESSING_PATH);
     match potentail_conn {
         Ok(conn) => {
             let potentail_names: Result<types::StringVecWrapper> = conn.query_row(GET_NAMES, rusqlite::params![channel_id], |row| row.get(0));
             match potentail_names {
                 Ok(names) => {
-                    let mut similarity_tuples: Vec<(String, f64)> = names.stringvec
-                    .iter()
-                    .map(|s| (s.clone(), jaro_winkler(partial, s)))
-                    .collect();
-                    similarity_tuples.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-                    let filtered_names: Vec<String> = similarity_tuples.into_iter().map(|(s, _)| s).collect();
-                    return filtered_names
+                    return names.stringvec
                     },
                 Err(_) => {
                     let nothing: Vec<String> = Vec::new();
