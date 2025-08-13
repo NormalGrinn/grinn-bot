@@ -234,7 +234,7 @@ async fn add_anime_info(anime_id: u64, hints: &mut Vec<types::Hint>) {
     }
 }
 
-pub async fn anime_guessing_setup(userName: &str, list_num:usize) -> (AnimeGuess, Vec<String>) {
+pub async fn anime_guessing_setup(userName: &str) -> (AnimeGuess, Vec<String>) {
     let client = Client::new();
     let json = json!(
         {
@@ -254,10 +254,15 @@ pub async fn anime_guessing_setup(userName: &str, list_num:usize) -> (AnimeGuess
                 .text()
                 .await;
     let result: Response = serde_json::from_str(&resp.unwrap()).unwrap();
-    let names = get_all_names(& result.data.MediaListCollection.lists[list_num].entries);
+    
+    let mut list: Vec<Entry> = Vec::new();
+    for mut l in result.data.MediaListCollection.lists {
+        list.append(&mut l.entries);
+    }
+    let names = get_all_names(&list);
     let mut rng = OsRng;
-    let chosen_entry: usize = rng.gen_range(0..result.data.MediaListCollection.lists[list_num].entries.len());
-    let mut anime_hints = generate_hint(&result.data.MediaListCollection.lists[list_num].entries[chosen_entry]);
+    let chosen_entry: usize = rng.gen_range(0..list.len());
+    let mut anime_hints = generate_hint(&list[chosen_entry]);
     add_anime_info(anime_hints.id, &mut anime_hints.hints).await;
     (anime_hints, names)
 }
